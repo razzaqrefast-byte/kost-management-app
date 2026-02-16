@@ -88,23 +88,18 @@ export async function updateBookingBiodata(bookingId: string, formData: FormData
         const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
         const filePath = `${user.id}/${fileName}`
 
-        // Upload to Supabase Storage - Use 'property-images' for now as it likely exists
-        // In a real app, we'd use a private 'documents' bucket
+        // Upload to Supabase Storage - Use private 'tenant-documents' bucket
         const { error: uploadError } = await supabase.storage
-            .from('property-images')
+            .from('tenant-documents')
             .upload(filePath, ktpFile)
 
         if (uploadError) {
             console.error('Upload error:', uploadError)
-            // Continue without URL or return error? Let's return error for KTP.
             return { error: 'Gagal mengunggah foto KTP: ' + uploadError.message }
         }
 
-        const { data: { publicUrl } } = supabase.storage
-            .from('property-images')
-            .getPublicUrl(filePath)
-
-        ktpUrl = publicUrl
+        // Store the path instead of public URL for private files
+        ktpUrl = filePath
     }
 
     // 3. Update Booking

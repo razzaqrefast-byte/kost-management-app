@@ -27,15 +27,29 @@ export default async function OwnerOccupantsPage() {
         .order('created_at', { ascending: false })
 
     // Filter for current owner
-    const filteredOccupants = bookings?.filter((b: any) => b.rooms.properties.owner_id === user.id)
+    const ownerOccupants = bookings?.filter((b: any) => b.rooms.properties.owner_id === user.id) || []
+
+    // 3. Generate Signed URLs for KTP if they are in the private bucket
+    const occupantsWithSignedUrls = await Promise.all(
+        ownerOccupants.map(async (booking: any) => {
+            if (booking.occupant_ktp_url && !booking.occupant_ktp_url.startsWith('http')) {
+                const { data } = await supabase.storage
+                    .from('tenant-documents')
+                    .createSignedUrl(booking.occupant_ktp_url, 3600) // 1 hour access
+
+                return { ...booking, signed_ktp_url: data?.signedUrl }
+            }
+            return { ...booking, signed_ktp_url: booking.occupant_ktp_url }
+        })
+    )
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Daftar Penghuni</h1>
 
-            {filteredOccupants && filteredOccupants.length > 0 ? (
+            {occupantsWithSignedUrls && occupantsWithSignedUrls.length > 0 ? (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredOccupants.map((booking: any) => (
+                    {occupantsWithSignedUrls.map((booking: any) => (
                         <div key={booking.id} className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                             <div className="p-6">
                                 <div className="flex justify-between items-start mb-4">
@@ -67,13 +81,13 @@ export default async function OwnerOccupantsPage() {
                                     </div>
                                 </div>
 
-                                {booking.occupant_ktp_url && (
+                                {booking.signed_ktp_url && (
                                     <div className="mt-6">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Foto KTP</p>
                                         <div className="relative h-40 w-full rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-900">
-                                            <a href={booking.occupant_ktp_url} target="_blank" rel="noopener noreferrer">
+                                            <a href={booking.signed_ktp_url} target="_blank" rel="noopener noreferrer">
                                                 <img
-                                                    src={booking.occupant_ktp_url}
+                                                    src={booking.signed_ktp_url}
                                                     alt="KTP Penghuni"
                                                     className="object-contain w-full h-full hover:opacity-75 transition-opacity"
                                                 />
