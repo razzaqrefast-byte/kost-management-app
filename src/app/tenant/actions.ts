@@ -120,7 +120,7 @@ export async function updateBookingBiodata(bookingId: string, formData: FormData
 
     if (updateError) {
         console.error('Update booking error:', updateError)
-        return { error: 'Gagal menyimpan biodata.' }
+        return { error: 'Gagal menyimpan biodata ke database: ' + updateError.message }
     }
 
     revalidatePath('/tenant/bookings')
