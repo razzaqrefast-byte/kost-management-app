@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateBookingBiodata } from '../../../actions'
 import Link from 'next/link'
 
-export default function BiodataPage({ params }: { params: { id: string } }) {
+export default function BiodataPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
@@ -16,7 +17,7 @@ export default function BiodataPage({ params }: { params: { id: string } }) {
         setError(null)
 
         const formData = new FormData(e.currentTarget)
-        const result = await updateBookingBiodata(params.id, formData)
+        const result = await updateBookingBiodata(id, formData)
 
         if (result.error) {
             setError(result.error)
