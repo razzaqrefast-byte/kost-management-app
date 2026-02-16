@@ -14,7 +14,7 @@ export default async function OwnerOccupantsPage() {
         .from('bookings')
         .select(`
             *,
-            tenant:profiles(full_name, phone, email),
+            tenant:profiles(full_name, phone),
             rooms(
                 name,
                 properties(
