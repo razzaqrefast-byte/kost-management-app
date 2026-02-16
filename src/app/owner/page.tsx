@@ -1,8 +1,64 @@
-export default function OwnerDashboard() {
+import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+
+export default async function OwnerDashboard() {
+    const supabase = await createClient()
+
+    // 1. Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    // 2. Fetch statistics
+    // Total Kost (properties owned by this user)
+    const { count: propertyCount } = await supabase
+        .from('properties')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', user.id)
+
+    // Kamar Kosong (rooms in properties owned by this user that are 'available')
+    // First get all property IDs for this owner
+    const { data: properties } = await supabase
+        .from('properties')
+        .select('id')
+        .eq('owner_id', user.id)
+
+    const propertyIds = properties?.map(p => p.id) || []
+
+    let roomCount = 0
+    if (propertyIds.length > 0) {
+        const { count } = await supabase
+            .from('rooms')
+            .select('*', { count: 'exact', head: true })
+            .in('property_id', propertyIds)
+            .eq('is_occupied', false)
+        roomCount = count || 0
+    }
+
+    // Permintaan Booking (pending bookings for rooms belonging to owner properties)
+    let bookingCount = 0
+    if (propertyIds.length > 0) {
+        // Fetch room IDs first for these properties
+        const { data: roomIdsData } = await supabase
+            .from('rooms')
+            .select('id')
+            .in('property_id', propertyIds)
+
+        const roomIds = roomIdsData?.map(r => r.id) || []
+
+        if (roomIds.length > 0) {
+            const { count } = await supabase
+                .from('bookings')
+                .select('*', { count: 'exact', head: true })
+                .in('room_id', roomIds)
+                .eq('status', 'pending')
+            bookingCount = count || 0
+        }
+    }
+
     return (
         <div className="px-4 py-8 sm:px-0">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {/* Card 1: Total Properti */}
+                {/* Card 1: Total Kost */}
                 <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
                     <div className="p-5">
                         <div className="flex items-center">
@@ -16,7 +72,7 @@ export default function OwnerDashboard() {
                                 <dl>
                                     <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Total Kost</dt>
                                     <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">0 Unit</div>
+                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{propertyCount || 0} Unit</div>
                                     </dd>
                                 </dl>
                             </div>
@@ -24,9 +80,9 @@ export default function OwnerDashboard() {
                     </div>
                     <div className="bg-gray-50 px-5 py-3 dark:bg-gray-700">
                         <div className="text-sm">
-                            <a href="/owner/properties" className="font-medium text-blue-700 hover:text-blue-900 dark:text-blue-400">
+                            <Link href="/owner/properties" className="font-medium text-blue-700 hover:text-blue-900 dark:text-blue-400">
                                 Lihat semua
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -45,7 +101,7 @@ export default function OwnerDashboard() {
                                 <dl>
                                     <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Kamar Kosong</dt>
                                     <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">0 Kamar</div>
+                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{roomCount} Kamar</div>
                                     </dd>
                                 </dl>
                             </div>
@@ -67,7 +123,7 @@ export default function OwnerDashboard() {
                                 <dl>
                                     <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Permintaan Booking</dt>
                                     <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">0</div>
+                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{bookingCount}</div>
                                     </dd>
                                 </dl>
                             </div>
@@ -75,16 +131,16 @@ export default function OwnerDashboard() {
                     </div>
                     <div className="bg-gray-50 px-5 py-3 dark:bg-gray-700">
                         <div className="text-sm">
-                            <a href="/owner/bookings" className="font-medium text-blue-700 hover:text-blue-900 dark:text-blue-400">
+                            <Link href="/owner/bookings" className="font-medium text-blue-700 hover:text-blue-900 dark:text-blue-400">
                                 Kelola booking
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div className="mt-8">
-                <div className="rounded-md bg-blue-50 p-4">
+                <div className="rounded-md bg-blue-50 p-4 dark:bg-blue-900/20">
                     <div className="flex">
                         <div className="flex-shrink-0">
                             <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
@@ -92,13 +148,16 @@ export default function OwnerDashboard() {
                             </svg>
                         </div>
                         <div className="ml-3 flex-1 md:flex md:justify-between">
-                            <p className="text-sm text-blue-700">
-                                Selamat datang! Anda belum menambahkan properti kost. Mulai sewakan kost Anda sekarang.
+                            <p className="text-sm text-blue-700 dark:text-blue-300">
+                                {propertyCount === 0
+                                    ? "Selamat datang! Anda belum menambahkan properti kost. Mulai sewakan kost Anda sekarang."
+                                    : `Anda memiliki ${propertyCount} properti terdaftar. Kelola properti Anda untuk mendapatkan tenant baru.`
+                                }
                             </p>
                             <p className="mt-3 text-sm md:ml-6 md:mt-0">
-                                <a href="/owner/properties/new" className="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600">
+                                <Link href="/owner/properties/new" className="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600 dark:text-blue-400">
                                     Tambah Kost Baru <span aria-hidden="true">&rarr;</span>
-                                </a>
+                                </Link>
                             </p>
                         </div>
                     </div>

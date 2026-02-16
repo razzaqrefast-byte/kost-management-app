@@ -3,7 +3,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function updateBookingStatus(bookingId: string, status: 'approved' | 'cancelled') {
+export async function updateBookingStatus(
+    bookingId: string,
+    status: 'approved' | 'cancelled',
+    rejectionReason?: string
+) {
     const supabase = await createClient()
 
     // 1. Get current user
@@ -39,14 +43,25 @@ export async function updateBookingStatus(bookingId: string, status: 'approved' 
     }
 
     // 3. Update booking status
-    const { error: updateError } = await supabase
+    const updateData: any = { status }
+    if (status === 'cancelled' && rejectionReason) {
+        updateData.rejection_reason = rejectionReason
+    }
+
+    const { data: updatedBooking, error: updateError } = await supabase
         .from('bookings')
-        .update({ status })
+        .update(updateData)
         .eq('id', bookingId)
+        .select()
+        .single()
 
     if (updateError) {
         console.error('Update booking error:', updateError)
-        return { error: 'Gagal merubah status booking.' }
+        return { error: 'Gagal merubah status booking di database.' }
+    }
+
+    if (!updatedBooking) {
+        return { error: 'Gagal memperbarui booking: Tidak ada data yang berubah.' }
     }
 
     // 4. If approved, mark room as occupied
@@ -64,6 +79,7 @@ export async function updateBookingStatus(bookingId: string, status: 'approved' 
 
     revalidatePath('/owner/bookings')
     revalidatePath('/tenant/bookings')
+    revalidatePath('/owner', 'layout')
 
     return { success: true }
 }

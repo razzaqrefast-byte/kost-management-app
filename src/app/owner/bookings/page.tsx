@@ -66,6 +66,19 @@ export default async function OwnerBookingsPage() {
                                     <div className="text-gray-500">Mulai: {new Date(booking.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</div>
                                     <div className="font-semibold text-gray-900 dark:text-gray-200">Rp {Number(booking.total_price).toLocaleString('id-ID')}</div>
                                 </div>
+                                {booking.status === 'cancelled' && (
+                                    <div className="pt-3 border-t border-gray-100 dark:border-gray-700 mb-3">
+                                        <div className="text-xs font-semibold text-red-600 mb-1">Keterangan:</div>
+                                        <div className="text-sm text-gray-700 dark:text-gray-300 italic">{booking.rejection_reason || 'Kamar sudah terisi atau alasan lainnya.'}</div>
+                                    </div>
+                                )}
+                                {booking.status === 'approved' && booking.occupant_name && (
+                                    <div className="pt-3 border-t border-gray-100 dark:border-gray-700 mb-3">
+                                        <div className="text-xs font-semibold text-green-600 mb-1">Biodata Penghuni:</div>
+                                        <div className="text-sm text-gray-900 dark:text-white font-medium">{booking.occupant_name}</div>
+                                        <div className="text-xs text-gray-500">NIK: {booking.occupant_ktp_number}</div>
+                                    </div>
+                                )}
                                 {booking.status === 'pending' && (
                                     <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
                                         <BookingActions bookingId={booking.id} />
@@ -84,6 +97,7 @@ export default async function OwnerBookingsPage() {
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Kost</th>
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Tanggal Mulai</th>
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
+                                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Keterangan</th>
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Total Harga</th>
                                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                                         <span className="sr-only">Aksi</span>
@@ -105,6 +119,24 @@ export default async function OwnerBookingsPage() {
                                         </td>
                                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                                             {statusBadge(booking.status)}
+                                        </td>
+                                        <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                            {booking.status === 'cancelled' && (
+                                                <div className="text-xs text-red-600 italic max-w-xs truncate" title={booking.rejection_reason}>
+                                                    Ket: {booking.rejection_reason || 'Kamar sudah terisi'}
+                                                </div>
+                                            )}
+                                            {booking.status === 'approved' && (
+                                                <div className="text-xs">
+                                                    {booking.occupant_name ? (
+                                                        <div className="text-green-600 font-medium truncate max-w-[150px]" title={booking.occupant_name}>
+                                                            {booking.occupant_name}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-yellow-600 italic">Menunggu Biodata</span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900 dark:text-white font-medium">
                                             Rp {Number(booking.total_price).toLocaleString('id-ID')}

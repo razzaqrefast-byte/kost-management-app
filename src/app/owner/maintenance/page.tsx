@@ -17,13 +17,13 @@ export default async function OwnerMaintenancePage() {
             *,
             properties!inner ( name, owner_id ),
             rooms ( name ),
-            profiles:reporter_id ( full_name )
+            profiles ( full_name )
         `)
         .eq('properties.owner_id', user.id)
         .order('created_at', { ascending: false })
 
     if (error) {
-        console.error('Fetch maintenance requests error:', error)
+        console.error('Fetch maintenance requests error:', JSON.stringify(error, null, 2))
     }
 
     return (

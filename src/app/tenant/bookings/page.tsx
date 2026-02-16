@@ -41,7 +41,7 @@ export default async function TenantBookingsPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Booking Saya</h1>
 
             {bookings && bookings.length > 0 ? (
@@ -51,11 +51,36 @@ export default async function TenantBookingsPage() {
                         {bookings.map((booking: any) => (
                             <div key={booking.id} className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                                 <div className="flex justify-between items-start mb-2">
-                                    <div className="font-bold text-gray-900 dark:text-white">{booking.rooms.properties.name}</div>
+                                    <div className="min-w-0">
+                                        <div className="font-bold text-gray-900 dark:text-white truncate">{booking.rooms.properties.name}</div>
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">{booking.rooms.name}</div>
+                                    </div>
                                     {statusBadge(booking.status)}
                                 </div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">{booking.rooms.name}</div>
-                                <div className="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-gray-700">
+
+                                {booking.status === 'cancelled' && (
+                                    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                        <div className="text-xs font-semibold text-red-600 mb-1">Keterangan:</div>
+                                        <div className="text-sm text-gray-700 dark:text-gray-300 italic">
+                                            {booking.rejection_reason || 'Kamar sudah terisi atau alasan lainnya.'}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {booking.status === 'approved' && (
+                                    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                        <div className="text-xs font-semibold text-blue-600 mb-1">Keterangan:</div>
+                                        {booking.occupant_name ? (
+                                            <div className="text-sm text-green-600 font-medium">Biodata sudah terisi</div>
+                                        ) : (
+                                            <Link href={`/tenant/bookings/${booking.id}/biodata`} className="text-sm text-blue-600 hover:underline font-medium">
+                                                Lengkapi Biodata &rarr;
+                                            </Link>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="mt-3 flex justify-between items-center pt-3 border-t border-gray-100 dark:border-gray-700">
                                     <div className="text-xs text-gray-500">Mulai: {new Date(booking.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                                     <div className="text-sm font-bold text-blue-600">Rp {Number(booking.total_price).toLocaleString('id-ID')}</div>
                                 </div>
@@ -71,6 +96,7 @@ export default async function TenantBookingsPage() {
                                     <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">Kost / Kamar</th>
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Tanggal Mulai</th>
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
+                                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Keterangan</th>
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Total Harga</th>
                                 </tr>
                             </thead>
@@ -86,6 +112,24 @@ export default async function TenantBookingsPage() {
                                         </td>
                                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                                             {statusBadge(booking.status)}
+                                        </td>
+                                        <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                            {booking.status === 'cancelled' && (
+                                                <div className="text-xs text-red-600 italic max-w-xs truncate" title={booking.rejection_reason}>
+                                                    {booking.rejection_reason || 'Kamar sudah terisi'}
+                                                </div>
+                                            )}
+                                            {booking.status === 'approved' && (
+                                                <>
+                                                    {booking.occupant_name ? (
+                                                        <span className="text-xs text-green-600 font-medium">Biodata terisi</span>
+                                                    ) : (
+                                                        <Link href={`/tenant/bookings/${booking.id}/biodata`} className="text-xs text-blue-600 hover:text-blue-500 font-medium underline">
+                                                            Lengkapi Biodata
+                                                        </Link>
+                                                    )}
+                                                </>
+                                            )}
                                         </td>
                                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900 dark:text-white font-medium">
                                             Rp {Number(booking.total_price).toLocaleString('id-ID')}

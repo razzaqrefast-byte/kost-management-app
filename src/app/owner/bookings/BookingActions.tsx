@@ -1,24 +1,35 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { updateBookingStatus } from './actions'
 
 export default function BookingActions({ bookingId }: { bookingId: string }) {
     const [loading, setLoading] = useState(false)
+    const router = useRouter()
 
     async function handleUpdate(status: 'approved' | 'cancelled') {
-        if (!confirm(`Apakah Anda yakin ingin ${status === 'approved' ? 'menerima' : 'menolak'} booking ini?`)) {
-            return
+        let reason = ''
+        if (status === 'cancelled') {
+            const inputReason = prompt('Silakan tulis alasan penolakan (contoh: Kamar sudah penuh):', 'Kamar sudah terisi')
+            if (inputReason === null) return // User cancelled prompt
+            reason = inputReason
+        } else {
+            if (!confirm('Apakah Anda yakin ingin menerima booking ini?')) {
+                return
+            }
         }
 
         setLoading(true)
-        const result = await updateBookingStatus(bookingId, status)
+        const result = await updateBookingStatus(bookingId, status, reason)
 
         if (result?.error) {
             alert(result.error)
             setLoading(false)
+        } else {
+            // Force a refresh to show the updated status
+            router.refresh()
         }
-        // No need to setLoading(false) on success as revalidatePath will refresh the Server Component
     }
 
     return (

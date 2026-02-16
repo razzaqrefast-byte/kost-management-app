@@ -62,3 +62,67 @@ export async function createBooking(roomId: string, formData: FormData) {
 
     redirect('/tenant/bookings')
 }
+
+export async function updateBookingBiodata(bookingId: string, formData: FormData) {
+    const supabase = await createClient()
+
+    // 1. Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        return { error: 'Anda harus login untuk mengakses fitur ini.' }
+    }
+
+    // 2. Extract data
+    const occupantName = formData.get('name') as string
+    const occupantKtpNumber = formData.get('ktpNumber') as string
+    const ktpFile = formData.get('ktpFile') as File
+
+    if (!occupantName || !occupantKtpNumber) {
+        return { error: 'Nama dan Nomor KTP wajib diisi.' }
+    }
+
+    let ktpUrl = ''
+    if (ktpFile && ktpFile.size > 0) {
+        // Generate unique filename
+        const fileExt = ktpFile.name.split('.').pop()
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
+        const filePath = `${user.id}/${fileName}`
+
+        // Upload to Supabase Storage - Use 'property-images' for now as it likely exists
+        // In a real app, we'd use a private 'documents' bucket
+        const { error: uploadError } = await supabase.storage
+            .from('property-images')
+            .upload(filePath, ktpFile)
+
+        if (uploadError) {
+            console.error('Upload error:', uploadError)
+            // Continue without URL or return error? Let's return error for KTP.
+            return { error: 'Gagal mengunggah foto KTP: ' + uploadError.message }
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('property-images')
+            .getPublicUrl(filePath)
+
+        ktpUrl = publicUrl
+    }
+
+    // 3. Update Booking
+    const { error: updateError } = await supabase
+        .from('bookings')
+        .update({
+            occupant_name: occupantName,
+            occupant_ktp_number: occupantKtpNumber,
+            occupant_ktp_url: ktpUrl || undefined
+        })
+        .eq('id', bookingId)
+        .eq('tenant_id', user.id)
+
+    if (updateError) {
+        console.error('Update booking error:', updateError)
+        return { error: 'Gagal menyimpan biodata.' }
+    }
+
+    revalidatePath('/tenant/bookings')
+    return { success: true }
+}
