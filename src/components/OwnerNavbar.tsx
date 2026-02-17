@@ -11,6 +11,7 @@ export default function OwnerNavbar() {
         { href: '/owner/payments', label: 'Pembayaran' },
         { href: '/owner/occupants', label: 'Penghuni' },
         { href: '/owner/maintenance', label: 'Komplain' },
+        { href: '/owner/analytics', label: 'Laporan' },
     ]
 
     return (
