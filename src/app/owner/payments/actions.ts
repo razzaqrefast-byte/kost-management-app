@@ -62,59 +62,64 @@ export async function rejectPayment(paymentId: string, reason: string) {
 }
 
 export async function getPropertyPayments(statusFilter?: string) {
-    const supabase = await createClient()
+    try {
+        const supabase = await createClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { payments: [] }
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return { payments: [] }
 
-    let query = supabase
-        .from('payments')
-        .select(`
-            *,
-            bookings(
-                id,
-                tenant:profiles(full_name, phone),
-                rooms(
-                    name,
-                    properties(
+        let query = supabase
+            .from('payments')
+            .select(`
+                *,
+                bookings(
+                    id,
+                    tenant:profiles(full_name, phone),
+                    rooms(
                         name,
-                        owner_id
+                        properties(
+                            name,
+                            owner_id
+                        )
                     )
                 )
-            )
-        `)
-        .order('created_at', { ascending: false })
+            `)
+            .order('created_at', { ascending: false })
 
-    if (statusFilter && statusFilter !== 'all') {
-        query = query.eq('status', statusFilter)
-    }
+        if (statusFilter && statusFilter !== 'all') {
+            query = query.eq('status', statusFilter)
+        }
 
-    const { data: payments, error } = await query
+        const { data: payments, error } = await query
 
-    // If table doesn't exist yet, return empty array with error message
-    if (error) {
-        console.error('Get property payments error:', error)
+        // If table doesn't exist yet, return empty array with error message
+        if (error) {
+            console.error('Get property payments error:', error)
+            return { payments: [], error: 'Tabel pembayaran belum dibuat. Silakan jalankan setup_payments.sql di Supabase.' }
+        }
+
+        // Filter for owner's properties
+        const ownerPayments = payments?.filter((p: any) => {
+            return p.bookings?.rooms?.properties?.owner_id === user.id
+        }) || []
+
+        // Generate signed URLs for proof images
+        const paymentsWithSignedUrls = await Promise.all(
+            ownerPayments.map(async (payment: any) => {
+                if (payment.proof_url && !payment.proof_url.startsWith('http')) {
+                    const { data } = await supabase.storage
+                        .from('payment-proofs')
+                        .createSignedUrl(payment.proof_url, 3600)
+
+                    return { ...payment, signed_proof_url: data?.signedUrl }
+                }
+                return { ...payment, signed_proof_url: payment.proof_url }
+            })
+        )
+
+        return { payments: paymentsWithSignedUrls }
+    } catch (err) {
+        console.error('Unexpected error in getPropertyPayments:', err)
         return { payments: [], error: 'Tabel pembayaran belum dibuat. Silakan jalankan setup_payments.sql di Supabase.' }
     }
-
-    // Filter for owner's properties
-    const ownerPayments = payments?.filter((p: any) => {
-        return p.bookings?.rooms?.properties?.owner_id === user.id
-    }) || []
-
-    // Generate signed URLs for proof images
-    const paymentsWithSignedUrls = await Promise.all(
-        ownerPayments.map(async (payment: any) => {
-            if (payment.proof_url && !payment.proof_url.startsWith('http')) {
-                const { data } = await supabase.storage
-                    .from('payment-proofs')
-                    .createSignedUrl(payment.proof_url, 3600)
-
-                return { ...payment, signed_proof_url: data?.signedUrl }
-            }
-            return { ...payment, signed_proof_url: payment.proof_url }
-        })
-    )
-
-    return { payments: paymentsWithSignedUrls }
 }

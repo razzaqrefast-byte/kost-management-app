@@ -94,58 +94,68 @@ export async function submitPayment(bookingId: string, formData: FormData) {
 }
 
 export async function getMyPayments() {
-    const supabase = await createClient()
+    try {
+        const supabase = await createClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { payments: [] }
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return { payments: [] }
 
-    const { data: payments, error } = await supabase
-        .from('payments')
-        .select(`
-            *,
-            bookings(
-                id,
-                rooms(
-                    name,
-                    properties(name)
+        const { data: payments, error } = await supabase
+            .from('payments')
+            .select(`
+                *,
+                bookings(
+                    id,
+                    rooms(
+                        name,
+                        properties(name)
+                    )
                 )
-            )
-        `)
-        .order('created_at', { ascending: false })
+            `)
+            .order('created_at', { ascending: false })
 
-    // If table doesn't exist yet, return empty array
-    if (error) {
-        console.error('Get payments error:', error)
+        // If table doesn't exist yet, return empty array
+        if (error) {
+            console.error('Get payments error:', error)
+            return { payments: [], error: 'Tabel pembayaran belum dibuat. Silakan jalankan setup_payments.sql di Supabase.' }
+        }
+
+        // Filter for user's bookings
+        const myPayments = payments?.filter((p: any) => {
+            return p.bookings?.id
+        }) || []
+
+        return { payments: myPayments }
+    } catch (err) {
+        console.error('Unexpected error in getMyPayments:', err)
         return { payments: [], error: 'Tabel pembayaran belum dibuat. Silakan jalankan setup_payments.sql di Supabase.' }
     }
-
-    // Filter for user's bookings
-    const myPayments = payments?.filter((p: any) => {
-        return p.bookings?.id
-    }) || []
-
-    return { payments: myPayments }
 }
 
 export async function getMyActiveBookings() {
-    const supabase = await createClient()
+    try {
+        const supabase = await createClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { bookings: [] }
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return { bookings: [] }
 
-    const { data: bookings } = await supabase
-        .from('bookings')
-        .select(`
-            *,
-            rooms(
-                name,
-                price_monthly,
-                properties(name)
-            )
-        `)
-        .eq('tenant_id', user.id)
-        .in('status', ['approved', 'active'])
-        .order('created_at', { ascending: false })
+        const { data: bookings } = await supabase
+            .from('bookings')
+            .select(`
+                *,
+                rooms(
+                    name,
+                    price_monthly,
+                    properties(name)
+                )
+            `)
+            .eq('tenant_id', user.id)
+            .in('status', ['approved', 'active'])
+            .order('created_at', { ascending: false })
 
-    return { bookings: bookings || [] }
+        return { bookings: bookings || [] }
+    } catch (err) {
+        console.error('Unexpected error in getMyActiveBookings:', err)
+        return { bookings: [] }
+    }
 }
