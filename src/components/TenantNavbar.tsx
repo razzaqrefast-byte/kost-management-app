@@ -7,6 +7,7 @@ export default function TenantNavbar() {
     const links = [
         { href: '/tenant', label: 'Cari Kost' },
         { href: '/tenant/bookings', label: 'Booking Saya' },
+        { href: '/tenant/payments', label: 'Pembayaran' },
         { href: '/tenant/maintenance', label: 'Keluhan' },
     ]
 

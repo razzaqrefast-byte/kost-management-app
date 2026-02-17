@@ -8,6 +8,7 @@ export default function OwnerNavbar() {
         { href: '/owner', label: 'Dashboard' },
         { href: '/owner/properties', label: 'Properti Saya' },
         { href: '/owner/bookings', label: 'Booking Masuk' },
+        { href: '/owner/payments', label: 'Pembayaran' },
         { href: '/owner/occupants', label: 'Penghuni' },
         { href: '/owner/maintenance', label: 'Komplain' },
     ]
