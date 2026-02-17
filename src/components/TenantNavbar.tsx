@@ -9,6 +9,7 @@ export default function TenantNavbar() {
         { href: '/tenant/bookings', label: 'Booking Saya' },
         { href: '/tenant/payments', label: 'Pembayaran' },
         { href: '/tenant/maintenance', label: 'Keluhan' },
+        { href: '/tenant/profile', label: 'Profil' },
     ]
 
     return (

@@ -82,7 +82,9 @@ export default async function TenantBookingsPage() {
 
                                 <div className="mt-3 flex justify-between items-center pt-3 border-t border-gray-100 dark:border-gray-700">
                                     <div className="text-xs text-gray-500">Mulai: {new Date(booking.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                                    <div className="text-sm font-bold text-blue-600">Rp {Number(booking.total_price).toLocaleString('id-ID')}</div>
+                                    <Link href={`/tenant/bookings/${booking.id}`} className="text-sm font-bold text-blue-600 hover:underline">
+                                        Detail & Chat &rarr;
+                                    </Link>
                                 </div>
                             </div>
                         ))}
@@ -98,6 +100,9 @@ export default async function TenantBookingsPage() {
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Keterangan</th>
                                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Total Harga</th>
+                                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                                        <span className="sr-only">Aksi</span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-800 bg-white dark:bg-gray-900">
@@ -133,6 +138,11 @@ export default async function TenantBookingsPage() {
                                         </td>
                                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900 dark:text-white font-medium">
                                             Rp {Number(booking.total_price).toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                                            <Link href={`/tenant/bookings/${booking.id}`} className="text-blue-600 hover:text-blue-500">
+                                                Detail
+                                            </Link>
                                         </td>
                                     </tr>
                                 ))}

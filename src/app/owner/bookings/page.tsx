@@ -141,7 +141,10 @@ export default async function OwnerBookingsPage() {
                                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900 dark:text-white font-medium">
                                             Rp {Number(booking.total_price).toLocaleString('id-ID')}
                                         </td>
-                                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 flex items-center justify-end gap-3">
+                                            <Link href={`/owner/bookings/${booking.id}`} className="text-blue-600 hover:text-blue-500">
+                                                Detail & Chat
+                                            </Link>
                                             {booking.status === 'pending' && (
                                                 <BookingActions bookingId={booking.id} />
                                             )}
