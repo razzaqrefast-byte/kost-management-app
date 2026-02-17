@@ -20,7 +20,7 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
             *,
             rooms (
                 name,
-                price_per_month,
+                price_monthly,
                 properties (
                     id,
                     name,
@@ -34,15 +34,8 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
         .single()
 
     if (error || !booking) {
-        return (
-            <div className="p-8 text-center bg-red-50 text-red-800">
-                <h1 className="text-xl font-bold">Booking Not Found</h1>
-                <p>ID: {bookingId}</p>
-                <p>User ID: {user.id}</p>
-                {error && <pre className="mt-4 text-xs">{JSON.stringify(error, null, 2)}</pre>}
-                <Link href="/tenant/bookings" className="mt-4 inline-block underline">Kembali</Link>
-            </div>
-        )
+        console.error('Fetch booking detail error:', error)
+        return notFound()
     }
 
     // 4. Fetch owner profile separately to be safe
@@ -78,7 +71,6 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Booking Info */}
                 <div className="lg:col-span-2 space-y-8">
-                    {/* ... rest of the file ... */}
                     <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white">Detail Booking</h2>
