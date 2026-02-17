@@ -1,4 +1,3 @@
-```
 import { getPropertyPayments } from './actions'
 import PaymentActions from './PaymentActions'
 import PaymentFilter from './PaymentFilter'
