@@ -34,10 +34,15 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
         .single()
 
     if (error || !booking) {
-        console.error('Fetch booking detail error:', JSON.stringify(error, null, 2))
-        console.error('Booking ID:', id)
-        console.error('User ID:', user.id)
-        return notFound()
+        return (
+            <div className="p-8 text-center bg-red-50 text-red-800">
+                <h1 className="text-xl font-bold">Booking Not Found</h1>
+                <p>ID: {id}</p>
+                <p>User ID: {user.id}</p>
+                {error && <pre className="mt-4 text-xs">{JSON.stringify(error, null, 2)}</pre>}
+                <Link href="/tenant/bookings" className="mt-4 inline-block underline">Kembali</Link>
+            </div>
+        )
     }
 
     // 4. Fetch owner profile separately to be safe
