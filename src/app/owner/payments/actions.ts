@@ -89,7 +89,13 @@ export async function getPropertyPayments(statusFilter?: string) {
         query = query.eq('status', statusFilter)
     }
 
-    const { data: payments } = await query
+    const { data: payments, error } = await query
+
+    // If table doesn't exist yet, return empty array with error message
+    if (error) {
+        console.error('Get property payments error:', error)
+        return { payments: [], error: 'Tabel pembayaran belum dibuat. Silakan jalankan setup_payments.sql di Supabase.' }
+    }
 
     // Filter for owner's properties
     const ownerPayments = payments?.filter((p: any) => {

@@ -4,7 +4,7 @@ import PaymentActions from './PaymentActions'
 export default async function OwnerPaymentsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
     const resolvedParams = await searchParams
     const statusFilter = resolvedParams.status || 'all'
-    const { payments } = await getPropertyPayments(statusFilter)
+    const { payments, error: paymentsError } = await getPropertyPayments(statusFilter)
 
     const statusBadge = (status: string) => {
         switch (status) {
@@ -42,6 +42,14 @@ export default async function OwnerPaymentsPage({ searchParams }: { searchParams
                     </select>
                 </div>
             </div>
+
+            {paymentsError && (
+                <div className="mb-6 rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-4 border border-yellow-200 dark:border-yellow-800">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        ⚠️ {paymentsError}
+                    </p>
+                </div>
+            )}
 
             {payments && payments.length > 0 ? (
                 <>

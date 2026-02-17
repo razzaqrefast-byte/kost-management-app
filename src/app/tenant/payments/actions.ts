@@ -99,7 +99,7 @@ export async function getMyPayments() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { payments: [] }
 
-    const { data: payments } = await supabase
+    const { data: payments, error } = await supabase
         .from('payments')
         .select(`
             *,
@@ -112,6 +112,12 @@ export async function getMyPayments() {
             )
         `)
         .order('created_at', { ascending: false })
+
+    // If table doesn't exist yet, return empty array
+    if (error) {
+        console.error('Get payments error:', error)
+        return { payments: [], error: 'Tabel pembayaran belum dibuat. Silakan jalankan setup_payments.sql di Supabase.' }
+    }
 
     // Filter for user's bookings
     const myPayments = payments?.filter((p: any) => {

@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export default async function TenantPaymentsPage() {
     const { bookings } = await getMyActiveBookings()
-    const { payments } = await getMyPayments()
+    const { payments, error: paymentsError } = await getMyPayments()
 
     const statusBadge = (status: string) => {
         switch (status) {
@@ -23,6 +23,14 @@ export default async function TenantPaymentsPage() {
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Pembayaran</h1>
+
+            {paymentsError && (
+                <div className="mb-6 rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-4 border border-yellow-200 dark:border-yellow-800">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        ⚠️ {paymentsError}
+                    </p>
+                </div>
+            )}
 
             {/* Active Bookings - Submit Payment */}
             <div className="mb-8">
