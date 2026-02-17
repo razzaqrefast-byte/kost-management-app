@@ -6,7 +6,18 @@ export const dynamic = 'force-dynamic'
 export default async function OwnerPaymentsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
     const resolvedParams = await searchParams
     const statusFilter = resolvedParams.status || 'all'
-    const { payments, error: paymentsError } = await getPropertyPayments(statusFilter)
+
+    let payments: any[] = []
+    let paymentsError: string | undefined
+
+    try {
+        const result = await getPropertyPayments(statusFilter)
+        payments = result.payments || []
+        paymentsError = result.error
+    } catch (error) {
+        console.error('Error loading owner payments page:', error)
+        paymentsError = 'Tabel pembayaran belum dibuat. Silakan jalankan setup_payments.sql di Supabase.'
+    }
 
     const statusBadge = (status: string) => {
         switch (status) {
@@ -46,10 +57,27 @@ export default async function OwnerPaymentsPage({ searchParams }: { searchParams
             </div>
 
             {paymentsError && (
-                <div className="mb-6 rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-4 border border-yellow-200 dark:border-yellow-800">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                        ⚠️ {paymentsError}
-                    </p>
+                <div className="mb-6 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-6 border-2 border-yellow-400 dark:border-yellow-600">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                            <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                        </div>
+                        <div className="ml-3 flex-1">
+                            <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+                                Fitur Pembayaran Belum Diaktifkan
+                            </h3>
+                            <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                                <p className="mb-2">Untuk mengaktifkan fitur pembayaran, admin perlu menjalankan script SQL berikut di Supabase:</p>
+                                <ol className="list-decimal list-inside space-y-1 ml-2">
+                                    <li>Buka Supabase Dashboard → SQL Editor</li>
+                                    <li>Jalankan script <code className="bg-yellow-100 dark:bg-yellow-800 px-1 rounded">setup_payments.sql</code></li>
+                                    <li>Refresh halaman ini</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
