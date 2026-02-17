@@ -1,5 +1,7 @@
 import { getPropertyPayments } from './actions'
-import PaymentActions from './PaymentActions'
+import dynamic from 'next/dynamic'
+
+const PaymentActions = dynamic(() => import('./PaymentActions'), { ssr: false })
 
 export const dynamic = 'force-dynamic'
 
