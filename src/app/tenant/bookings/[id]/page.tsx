@@ -25,12 +25,7 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
                     id,
                     name,
                     address,
-                    owner_id,
-                    profiles (
-                        full_name,
-                        phone,
-                        avatar_url
-                    )
+                    owner_id
                 )
             )
         `)
@@ -39,9 +34,18 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
         .single()
 
     if (error || !booking) {
-        console.error('Fetch booking detail error:', error)
+        console.error('Fetch booking detail error:', JSON.stringify(error, null, 2))
+        console.error('Booking ID:', id)
+        console.error('User ID:', user.id)
         return notFound()
     }
+
+    // 4. Fetch owner profile separately to be safe
+    const { data: ownerProfile } = await supabase
+        .from('profiles')
+        .select('full_name, phone, avatar_url')
+        .eq('id', booking.rooms.properties.owner_id)
+        .single()
 
     // 3. Fetch messages
     const { data: messagesData } = await supabase
@@ -110,16 +114,14 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
                         </div>
                         <div className="p-6 flex items-center gap-4">
                             <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xl font-bold">
-                                {booking.rooms.properties.profiles ? (
-                                    booking.rooms.properties.profiles.full_name?.charAt(0) || 'O'
-                                ) : 'O'}
+                                {ownerProfile?.full_name?.charAt(0) || 'O'}
                             </div>
                             <div>
                                 <p className="text-base font-bold text-gray-900 dark:text-white">
-                                    {booking.rooms.properties.profiles?.full_name || 'Owner Properti'}
+                                    {ownerProfile?.full_name || 'Owner Properti'}
                                 </p>
                                 <p className="text-sm text-gray-500">
-                                    WhatsApp: {booking.rooms.properties.profiles?.phone || '-'}
+                                    WhatsApp: {ownerProfile?.phone || '-'}
                                 </p>
                             </div>
                         </div>
