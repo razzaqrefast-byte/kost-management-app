@@ -1,6 +1,8 @@
 import { getMyActiveBookings, getMyPayments } from './actions'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function TenantPaymentsPage() {
     const { bookings } = await getMyActiveBookings()
     const { payments, error: paymentsError } = await getMyPayments()

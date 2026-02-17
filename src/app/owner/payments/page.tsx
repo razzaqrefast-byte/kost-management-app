@@ -1,6 +1,8 @@
 import { getPropertyPayments } from './actions'
 import PaymentActions from './PaymentActions'
 
+export const dynamic = 'force-dynamic'
+
 export default async function OwnerPaymentsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
     const resolvedParams = await searchParams
     const statusFilter = resolvedParams.status || 'all'
