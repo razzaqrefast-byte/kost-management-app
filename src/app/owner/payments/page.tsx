@@ -1,6 +1,6 @@
 import { getPropertyPayments } from './actions'
 import PaymentActions from './PaymentActions'
-import PaymentFilter from './PaymentFilter'
+import StatusFilter from './StatusFilter'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,7 +42,7 @@ export default async function OwnerPaymentsPage({ searchParams }: { searchParams
 
                 {/* Filter */}
                 <div className="mt-4 sm:mt-0">
-                    <PaymentFilter currentFilter={statusFilter} />
+                    <StatusFilter defaultValue={statusFilter} />
                 </div>
             </div>
 
