@@ -10,8 +10,7 @@ export default async function OwnerMaintenancePage() {
     if (!user) redirect('/login')
 
     // 2. Fetch requests related to owner's properties
-    // We join with properties to filter by owner_id and join with profiles to see reporter name
-    const { data: requests, error } = await supabase
+    const { data: requestsData, error } = await supabase
         .from('maintenance_requests')
         .select(`
             *,
@@ -21,6 +20,17 @@ export default async function OwnerMaintenancePage() {
         `)
         .eq('properties.owner_id', user.id)
         .order('created_at', { ascending: false })
+
+    // Generate signed URLs for private images
+    const requests = await Promise.all((requestsData || []).map(async (request) => {
+        if (request.image_url && !request.image_url.startsWith('http')) {
+            const { data } = await supabase.storage
+                .from('maintenance-photos')
+                .createSignedUrl(request.image_url, 3600)
+            return { ...request, signed_url: data?.signedUrl }
+        }
+        return { ...request, signed_url: request.image_url }
+    }))
 
     if (error) {
         console.error('Fetch maintenance requests error:', JSON.stringify(error, null, 2))

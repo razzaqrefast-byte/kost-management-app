@@ -13,9 +13,22 @@ export default function NewMaintenanceForm({
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [selectedPropertyId, setSelectedPropertyId] = useState('')
-    const [imageUrl, setImageUrl] = useState('')
+    const [imagePreview, setImagePreview] = useState<string | null>(null)
 
     const selectedProperty = properties.find(p => p.id === selectedPropertyId)
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+        } else {
+            setImagePreview(null)
+        }
+    }
 
     async function handleSubmit(formData: FormData) {
         setLoading(true)
@@ -96,11 +109,21 @@ export default function NewMaintenanceForm({
                 <label className="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-200 mb-2">
                     Foto Bukti (Opsional)
                 </label>
-                <ImageUpload
-                    bucket="room-images" // Reusing room-images bucket for maintenance
-                    onUploadComplete={(url) => setImageUrl(url)}
-                />
-                <input type="hidden" name="imageUrl" value={imageUrl} />
+                <div className="mt-2 flex items-center gap-x-3">
+                    <input
+                        type="file"
+                        id="imageFile"
+                        name="imageFile"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                    />
+                </div>
+                {imagePreview && (
+                    <div className="mt-4">
+                        <img src={imagePreview} alt="Preview" className="h-40 w-auto rounded-lg object-cover border border-gray-200" />
+                    </div>
+                )}
             </div>
 
             {error && (

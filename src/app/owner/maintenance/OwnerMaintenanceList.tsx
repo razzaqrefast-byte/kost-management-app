@@ -33,8 +33,8 @@ export default function OwnerMaintenanceList({
                                     <div className="flex items-center gap-x-3">
                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">{request.title}</p>
                                         <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${request.status === 'open' ? 'bg-red-100 text-red-800' :
-                                                request.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-green-100 text-green-800'
+                                            request.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-green-100 text-green-800'
                                             }`}>
                                             {request.status.charAt(0).toUpperCase() + request.status.slice(1).replace('_', ' ')}
                                         </span>
@@ -47,9 +47,9 @@ export default function OwnerMaintenanceList({
                                         <span>Oleh: {request.profiles?.full_name || 'Tenant'}</span>
                                         <span>{new Date(request.created_at).toLocaleDateString('id-ID')}</span>
                                     </div>
-                                    {request.image_url && (
+                                    {request.signed_url && (
                                         <div className="mt-3">
-                                            <a href={request.image_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">
+                                            <a href={request.signed_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">
                                                 Lihat Foto Lampiran
                                             </a>
                                         </div>

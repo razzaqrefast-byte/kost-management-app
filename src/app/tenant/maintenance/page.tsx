@@ -10,7 +10,7 @@ export default async function TenantMaintenancePage() {
     if (!user) redirect('/login')
 
     // 2. Fetch requests
-    const { data: requests, error } = await supabase
+    const { data: requestsData, error } = await supabase
         .from('maintenance_requests')
         .select(`
             *,
@@ -19,6 +19,17 @@ export default async function TenantMaintenancePage() {
         `)
         .eq('reporter_id', user.id)
         .order('created_at', { ascending: false })
+
+    // Generate signed URLs for private images
+    const requests = await Promise.all((requestsData || []).map(async (request) => {
+        if (request.image_url && !request.image_url.startsWith('http')) {
+            const { data } = await supabase.storage
+                .from('maintenance-photos')
+                .createSignedUrl(request.image_url, 3600)
+            return { ...request, signed_url: data?.signedUrl }
+        }
+        return { ...request, signed_url: request.image_url }
+    }))
 
     return (
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -48,8 +59,8 @@ export default async function TenantMaintenancePage() {
                                         <p className="truncate text-sm font-medium text-blue-600 dark:text-blue-400">{request.title}</p>
                                         <div className="ml-2 flex flex-shrink-0">
                                             <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${request.status === 'open' ? 'bg-red-100 text-red-800' :
-                                                    request.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                                                        'bg-green-100 text-green-800'
+                                                request.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-green-100 text-green-800'
                                                 }`}>
                                                 {request.status.charAt(0).toUpperCase() + request.status.slice(1).replace('_', ' ')}
                                             </span>
@@ -66,9 +77,9 @@ export default async function TenantMaintenancePage() {
                                         </div>
                                     </div>
                                     <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{request.description}</p>
-                                    {request.image_url && (
+                                    {request.signed_url && (
                                         <div className="mt-3">
-                                            <a href={request.image_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">
+                                            <a href={request.signed_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">
                                                 Lihat Foto Lampiran
                                             </a>
                                         </div>

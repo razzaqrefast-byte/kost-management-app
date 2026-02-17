@@ -16,20 +16,39 @@ export async function createMaintenanceRequest(formData: FormData) {
     const roomId = formData.get('roomId') as string
     const title = formData.get('title') as string
     const description = formData.get('description') as string
-    const imageUrl = formData.get('imageUrl') as string
+    const imageFile = formData.get('imageFile') as File
 
     if (!propertyId || !title) {
         return { error: 'Properti dan Judul wajib diisi' }
     }
 
-    // 3. Insert Request
+    let imagePath = null
+
+    // 3. Handle Image Upload if exists
+    if (imageFile && imageFile.size > 0) {
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
+        const filePath = `${user.id}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('maintenance-photos')
+            .upload(filePath, imageFile)
+
+        if (uploadError) {
+            console.error('Upload Maintenance Image Error:', uploadError)
+            return { error: 'Gagal mengunggah foto: ' + uploadError.message }
+        }
+        imagePath = filePath
+    }
+
+    // 4. Insert Request
     const { error } = await supabase.from('maintenance_requests').insert({
         property_id: propertyId,
         room_id: roomId || null,
         reporter_id: user.id,
         title,
         description,
-        image_url: imageUrl || null,
+        image_url: imagePath, // Storing path instead of public URL
         status: 'open'
     })
 
