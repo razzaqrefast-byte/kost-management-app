@@ -5,9 +5,9 @@ import ChatBox from '@/components/ChatBox'
 
 export const dynamic = 'force-dynamic'
 
-export default async function TenantBookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function TenantBookingDetailPage({ params }: { params: Promise<{ bookingId: string }> }) {
     const supabase = await createClient()
-    const { id } = await params
+    const { bookingId } = await params
 
     // 1. Auth check
     const { data: { user } } = await supabase.auth.getUser()
@@ -29,7 +29,7 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
                 )
             )
         `)
-        .eq('id', id)
+        .eq('id', bookingId)
         .eq('tenant_id', user.id)
         .single()
 
@@ -37,7 +37,7 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
         return (
             <div className="p-8 text-center bg-red-50 text-red-800">
                 <h1 className="text-xl font-bold">Booking Not Found</h1>
-                <p>ID: {id}</p>
+                <p>ID: {bookingId}</p>
                 <p>User ID: {user.id}</p>
                 {error && <pre className="mt-4 text-xs">{JSON.stringify(error, null, 2)}</pre>}
                 <Link href="/tenant/bookings" className="mt-4 inline-block underline">Kembali</Link>
@@ -59,7 +59,7 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
             *,
             sender:profiles(full_name, avatar_url)
         `)
-        .eq('booking_id', id)
+        .eq('booking_id', bookingId)
         .order('created_at', { ascending: true })
 
     const initialMessages = messagesData || []
@@ -78,6 +78,7 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Booking Info */}
                 <div className="lg:col-span-2 space-y-8">
+                    {/* ... rest of the file ... */}
                     <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white">Detail Booking</h2>
@@ -136,7 +137,7 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
                 {/* Chat Column */}
                 <div className="lg:col-span-1">
                     <ChatBox
-                        bookingId={id}
+                        bookingId={bookingId}
                         currentUserId={user.id}
                         initialMessages={initialMessages as any}
                     />

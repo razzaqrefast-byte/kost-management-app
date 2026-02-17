@@ -6,9 +6,9 @@ import BookingActions from '../BookingActions'
 
 export const dynamic = 'force-dynamic'
 
-export default async function OwnerBookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OwnerBookingDetailPage({ params }: { params: Promise<{ bookingId: string }> }) {
     const supabase = await createClient()
-    const { id } = await params
+    const { bookingId } = await params
 
     // 1. Auth check
     const { data: { user } } = await supabase.auth.getUser()
@@ -28,7 +28,7 @@ export default async function OwnerBookingDetailPage({ params }: { params: Promi
                 )
             )
         `)
-        .eq('id', id)
+        .eq('id', bookingId)
         .eq('rooms.properties.owner_id', user.id)
         .single()
 
@@ -44,7 +44,7 @@ export default async function OwnerBookingDetailPage({ params }: { params: Promi
             *,
             sender:profiles(full_name, avatar_url)
         `)
-        .eq('booking_id', id)
+        .eq('booking_id', bookingId)
         .order('created_at', { ascending: true })
 
     const initialMessages = messagesData || []
@@ -141,7 +141,7 @@ export default async function OwnerBookingDetailPage({ params }: { params: Promi
                 {/* Chat Column */}
                 <div className="lg:col-span-1">
                     <ChatBox
-                        bookingId={id}
+                        bookingId={bookingId}
                         currentUserId={user.id}
                         initialMessages={initialMessages as any}
                     />
