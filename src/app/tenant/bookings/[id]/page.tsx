@@ -26,7 +26,7 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
                     name,
                     address,
                     owner_id,
-                    profiles:owner_id (
+                    profiles (
                         full_name,
                         phone,
                         avatar_url
@@ -110,11 +110,17 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
                         </div>
                         <div className="p-6 flex items-center gap-4">
                             <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xl font-bold">
-                                {booking.rooms.properties.profiles.full_name?.charAt(0) || 'O'}
+                                {booking.rooms.properties.profiles ? (
+                                    booking.rooms.properties.profiles.full_name?.charAt(0) || 'O'
+                                ) : 'O'}
                             </div>
                             <div>
-                                <p className="text-base font-bold text-gray-900 dark:text-white">{booking.rooms.properties.profiles.full_name}</p>
-                                <p className="text-sm text-gray-500">WhatsApp: {booking.rooms.properties.profiles.phone || '-'}</p>
+                                <p className="text-base font-bold text-gray-900 dark:text-white">
+                                    {booking.rooms.properties.profiles?.full_name || 'Owner Properti'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                    WhatsApp: {booking.rooms.properties.profiles?.phone || '-'}
+                                </p>
                             </div>
                         </div>
                     </div>
