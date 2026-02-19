@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 
 export async function updateBookingStatus(
     bookingId: string,
-    status: 'approved' | 'cancelled',
+    status: 'approved' | 'cancelled' | 'completed',
     rejectionReason?: string
 ) {
     const supabase = await createClient()
@@ -64,16 +64,15 @@ export async function updateBookingStatus(
         return { error: 'Gagal memperbarui booking: Tidak ada data yang berubah.' }
     }
 
-    // 4. If approved, mark room as occupied
-    if (status === 'approved') {
+    // 4. If approved, mark room as occupied. If completed, mark as vacant.
+    if (status === 'approved' || status === 'completed') {
         const { error: roomError } = await supabase
             .from('rooms')
-            .update({ is_occupied: true })
+            .update({ is_occupied: status === 'approved' })
             .eq('id', booking.room_id)
 
         if (roomError) {
             console.error('Update room error:', roomError)
-            // Still proceed as status is updated
         }
     }
 

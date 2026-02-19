@@ -79,11 +79,9 @@ export default async function OwnerBookingsPage() {
                                         <div className="text-xs text-gray-500">NIK: {booking.occupant_ktp_number}</div>
                                     </div>
                                 )}
-                                {booking.status === 'pending' && (
-                                    <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
-                                        <BookingActions bookingId={booking.id} />
-                                    </div>
-                                )}
+                                <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+                                    <BookingActions bookingId={booking.id} status={booking.status} />
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -145,9 +143,7 @@ export default async function OwnerBookingsPage() {
                                             <Link href={`/owner/bookings/${booking.id}`} className="text-blue-600 hover:text-blue-500">
                                                 Detail & Chat
                                             </Link>
-                                            {booking.status === 'pending' && (
-                                                <BookingActions bookingId={booking.id} />
-                                            )}
+                                            <BookingActions bookingId={booking.id} status={booking.status} />
                                         </td>
                                     </tr>
                                 ))}

@@ -75,7 +75,7 @@ export default async function OwnerBookingDetailPage({ params }: { params: Promi
                     <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white">Detail Booking Masuk</h2>
-                            {booking.status === 'pending' && <BookingActions bookingId={booking.id} />}
+                            {booking.status !== 'cancelled' && booking.status !== 'completed' && <BookingActions bookingId={booking.id} status={booking.status} />}
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
