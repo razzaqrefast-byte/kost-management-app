@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ThemeToggle } from './ThemeToggle'
 
 interface NavLink {
     href: string
@@ -56,7 +57,8 @@ export default function Navbar({
 
                     {/* Desktop Logout & Mobile Menu Toggle */}
                     <div className="flex items-center">
-                        <div className="hidden sm:flex items-center">
+                        <div className="hidden sm:flex items-center gap-x-4">
+                            <ThemeToggle />
                             <button
                                 onClick={onLogout}
                                 className="rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200"
@@ -108,6 +110,10 @@ export default function Navbar({
                             )}
                         </Link>
                     ))}
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between px-3">
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Tema</span>
+                        <ThemeToggle />
+                    </div>
                     <button
                         onClick={() => {
                             setIsOpen(false)

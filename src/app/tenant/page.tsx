@@ -31,11 +31,11 @@ export default async function TenantDashboard() {
                 <div className="relative">
                     <input
                         type="text"
-                        className="block w-full rounded-md border-0 py-3 pl-4 pr-12 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                        className="block w-full rounded-md border-0 py-3 pl-4 pr-12 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                         placeholder="Cari lokasi, nama kost, atau fasilitas..."
                     />
                     <div className="absolute inset-y-0 right-0 flex py-1.5 pr-1.5">
-                        <button className="inline-flex items-center rounded border border-gray-200 px-2 font-sans text-xs font-medium text-gray-400">
+                        <button className="inline-flex items-center rounded border border-gray-200 dark:border-gray-700 px-2 font-sans text-xs font-medium text-gray-400 dark:text-gray-500">
                             Cari
                         </button>
                     </div>
