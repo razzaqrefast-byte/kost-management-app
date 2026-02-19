@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect } from 'react'
 import Navbar from '@/components/Navbar'
 import { signout } from '@/app/auth/actions'
