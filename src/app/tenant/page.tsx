@@ -46,7 +46,12 @@ export default async function TenantDashboard() {
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Rekomendasi Kost</h2>
 
-                {properties && properties.length > 0 ? (
+                {error ? (
+                    <div className="rounded-lg border-2 border-dashed border-red-300 p-12 text-center text-red-500 bg-red-50">
+                        <p className="font-bold">Terjadi kesalahan saat memuat data:</p>
+                        <p className="text-sm">{error.message}</p>
+                    </div>
+                ) : properties && properties.length > 0 ? (
                     <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
                         {properties.map((property) => (
                             <div key={property.id} className="group relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
@@ -104,6 +109,7 @@ export default async function TenantDashboard() {
                 ) : (
                     <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center text-gray-500">
                         <p>Belum ada kost yang tersedia saat ini.</p>
+                        <p className="mt-2 text-sm text-gray-400">Coba login sebagai Owner dan tambahkan kost pertama Anda untuk melihat rekomendasi di sini!</p>
                     </div>
                 )}
             </div>
