@@ -6,10 +6,14 @@ export default async function TenantDashboard() {
 
     // Fetch properties (and maybe single representative image later)
     // For now, simple fetch
-    const { data: properties } = await supabase
+    const { data: properties, error } = await supabase
         .from('properties')
         .select('*, rooms(count), reviews(rating)')
         .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error('Fetch properties error:', error)
+    }
 
     return (
         <div>
