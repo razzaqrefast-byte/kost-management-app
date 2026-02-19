@@ -1,7 +1,5 @@
-'use client'
-
 import { useState, useEffect, useRef } from 'react'
-import { sendMessage, getMessages } from '@/app/actions/messages'
+import { sendMessage, getMessages, markAsRead } from '@/app/actions/messages'
 
 interface Message {
     id: string
@@ -35,19 +33,25 @@ export default function ChatBox({
 
     useEffect(() => {
         scrollToBottom()
-    }, [messages])
+        // Mark messages as read when the component mounts or messages change
+        markAsRead(bookingId)
+    }, [messages, bookingId]) // Added bookingId to dependencies for completeness
 
     // Poll for new messages every 5 seconds
     useEffect(() => {
         const interval = setInterval(async () => {
             const result = await getMessages(bookingId)
             if (result.messages) {
-                setMessages(result.messages)
+                // Only update and mark as read if there are new messages
+                if (result.messages.length > messages.length) {
+                    setMessages(result.messages)
+                    markAsRead(bookingId) // Mark new messages as read
+                }
             }
         }, 5000)
 
         return () => clearInterval(interval)
-    }, [bookingId])
+    }, [bookingId, messages]) // Added messages to dependencies to ensure comparison with latest state
 
     async function handleSendMessage(e: React.FormEvent) {
         e.preventDefault()
@@ -85,8 +89,8 @@ export default function ChatBox({
                             className={`flex ${msg.sender_id === currentUserId ? 'justify-end' : 'justify-start'}`}
                         >
                             <div className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${msg.sender_id === currentUserId
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                                 }`}>
                                 <div className="flex justify-between items-baseline gap-4 mb-1">
                                     <span className="text-[10px] font-bold uppercase opacity-75">

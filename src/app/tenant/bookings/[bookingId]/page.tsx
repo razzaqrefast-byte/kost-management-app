@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import ChatBox from '@/components/ChatBox'
+import { submitReview } from '@/app/actions/reviews'
+import ReviewForm from '@/components/ReviewForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,6 +58,13 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
         .order('created_at', { ascending: true })
 
     const initialMessages = messagesData || []
+
+    // 5. Fetch existing review if any
+    const { data: existingReview } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .single()
 
     return (
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -124,6 +133,31 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
                             </div>
                         </div>
                     </div>
+
+                    {/* Review Section */}
+                    {booking.status === 'completed' && (
+                        <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Ulasan Anda</h2>
+                            </div>
+                            <div className="p-6">
+                                {existingReview ? (
+                                    <div>
+                                        <div className="flex items-center gap-1 mb-2 text-yellow-400">
+                                            {[...Array(5)].map((_, i) => (
+                                                <svg key={i} className={`h-5 w-5 ${i < existingReview.rating ? 'fill-current' : 'text-gray-300'}`} viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                            ))}
+                                        </div>
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{existingReview.comment}"</p>
+                                    </div>
+                                ) : (
+                                    <ReviewForm bookingId={bookingId} propertyId={booking.rooms.properties.id} />
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Chat Column */}

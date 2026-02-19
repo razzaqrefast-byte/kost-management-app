@@ -27,7 +27,47 @@ export async function sendMessage(bookingId: string, content: string) {
 
     revalidatePath(`/tenant/bookings/${bookingId}`)
     revalidatePath(`/owner/bookings/${bookingId}`)
+
     return { success: true }
+}
+
+export async function markAsRead(bookingId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('booking_id', bookingId)
+        .neq('sender_id', user.id) // Only mark messages FROM others as read
+        .eq('is_read', false)
+
+    if (error) {
+        console.error('Mark as read error:', error)
+        return { error: error.message }
+    }
+
+    return { success: true }
+}
+
+export async function getUnreadCount() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return 0
+
+    const { data, count, error } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_read', false)
+        .neq('sender_id', user.id)
+
+    if (error) {
+        console.error('Get unread count error:', error)
+        return 0
+    }
+
+    return count || 0
 }
 
 export async function getMessages(bookingId: string) {

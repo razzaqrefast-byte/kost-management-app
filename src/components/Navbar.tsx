@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 interface NavLink {
     href: string
     label: string
+    badge?: number
 }
 
 export default function Navbar({
@@ -37,12 +38,17 @@ export default function Navbar({
                                 <Link
                                     key={link.href}
                                     href={link.href}
-                                    className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium transition-colors duration-200 ${pathname === link.href
-                                            ? 'border-blue-500 text-gray-900 dark:text-white'
-                                            : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'
+                                    className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium transition-colors duration-200 relative ${pathname === link.href
+                                        ? 'border-blue-500 text-gray-900 dark:text-white'
+                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'
                                         }`}
                                 >
                                     {link.label}
+                                    {link.badge && link.badge > 0 && (
+                                        <span className="absolute top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                                            {link.badge > 99 ? '99+' : link.badge}
+                                        </span>
+                                    )}
                                 </Link>
                             ))}
                         </div>
@@ -89,12 +95,17 @@ export default function Navbar({
                             key={link.href}
                             href={link.href}
                             onClick={() => setIsOpen(false)}
-                            className={`block rounded-md px-3 py-2 text-base font-medium ${pathname === link.href
-                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
-                                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'
+                            className={`flex items-center justify-between rounded-md px-3 py-2 text-base font-medium ${pathname === link.href
+                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
+                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'
                                 }`}
                         >
-                            {link.label}
+                            <span>{link.label}</span>
+                            {link.badge && link.badge > 0 && (
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                                    {link.badge > 99 ? '99+' : link.badge}
+                                </span>
+                            )}
                         </Link>
                     ))}
                     <button
