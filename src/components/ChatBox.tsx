@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, useRef } from 'react'
 import { sendMessage, getMessages, markAsRead } from '@/app/actions/messages'
 
