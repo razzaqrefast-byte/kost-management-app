@@ -48,8 +48,16 @@ export default async function TenantDashboard() {
 
                 {error ? (
                     <div className="rounded-lg border-2 border-dashed border-red-300 p-12 text-center text-red-500 bg-red-50">
-                        <p className="font-bold">Terjadi kesalahan saat memuat data:</p>
-                        <p className="text-sm">{error.message}</p>
+                        <p className="font-bold">Terjadi kesalahan database:</p>
+                        <p className="text-sm mb-4">{error.message}</p>
+                        {error.message.includes('relationship') && (
+                            <div className="text-left bg-white p-4 rounded border border-red-200 text-xs">
+                                <p className="font-bold text-red-700 mb-1">Cara Perbaikan:</p>
+                                <p>Error ini biasanya terjadi karena tabel <code className="bg-gray-100 px-1 rounded">reviews</code> atau relasinya belum dibuat di Supabase.</p>
+                                <p className="mt-2">Silakan jalankan file SQL berikut di Supabase SQL Editor:</p>
+                                <code className="block mt-1 p-2 bg-gray-800 text-gray-100 rounded">setup_reviews_and_notifications.sql</code>
+                            </div>
+                        )}
                     </div>
                 ) : properties && properties.length > 0 ? (
                     <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
