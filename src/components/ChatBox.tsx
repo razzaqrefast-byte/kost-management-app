@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { sendMessage, getMessages, markAsRead } from '@/app/actions/messages'
+import { createClient } from '@/lib/supabase/client'
 
 interface Message {
     id: string
@@ -27,6 +28,7 @@ export default function ChatBox({
     const [content, setContent] = useState('')
     const [loading, setLoading] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const supabase = createClient()
 
     // Scroll to bottom helper
     const scrollToBottom = () => {
@@ -37,23 +39,44 @@ export default function ChatBox({
         scrollToBottom()
         // Mark messages as read when the component mounts or messages change
         markAsRead(bookingId)
-    }, [messages, bookingId]) // Added bookingId to dependencies for completeness
+    }, [messages, bookingId])
 
-    // Poll for new messages every 5 seconds
+    // Real-time subscription
     useEffect(() => {
-        const interval = setInterval(async () => {
-            const result = await getMessages(bookingId)
-            if (result.messages) {
-                // Only update and mark as read if there are new messages
-                if (result.messages.length > messages.length) {
-                    setMessages(result.messages)
-                    markAsRead(bookingId) // Mark new messages as read
-                }
-            }
-        }, 5000)
+        const channel = supabase
+            .channel(`booking-${bookingId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `booking_id=eq.${bookingId}`
+                },
+                async (payload) => {
+                    // Fetch full message with sender info (since payload only has raw data)
+                    const { data: newMessage, error } = await supabase
+                        .from('messages')
+                        .select('*, sender:profiles(full_name, avatar_url)')
+                        .eq('id', payload.new.id)
+                        .single()
 
-        return () => clearInterval(interval)
-    }, [bookingId, messages]) // Added messages to dependencies to ensure comparison with latest state
+                    if (newMessage && !error) {
+                        setMessages((prev: Message[]) => {
+                            // Prevent duplicates
+                            if (prev.find((m: Message) => m.id === newMessage.id)) return prev
+                            return [...prev, newMessage as any]
+                        })
+                        markAsRead(bookingId)
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [bookingId])
 
     async function handleSendMessage(e: React.FormEvent) {
         e.preventDefault()
