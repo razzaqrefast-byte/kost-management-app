@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
   return (
@@ -23,6 +24,7 @@ export default function Home() {
             </Link>
           </nav>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Link
               href="/login"
               className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
