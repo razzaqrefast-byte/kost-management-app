@@ -36,8 +36,17 @@ export default async function TenantBookingDetailPage({ params }: { params: Prom
         .single()
 
     if (error || !booking) {
-        console.error('Fetch booking detail error:', error)
-        return notFound()
+        console.error('Fetch tenant booking detail error:', error)
+        console.error('Booking ID attempted:', bookingId)
+        console.error('User ID:', user.id)
+        // Temporary: show error instead of 404 to debug
+        return (
+            <div className="p-8 text-center text-red-500">
+                <h1 className="text-xl font-bold">Booking Tidak Ditemukan (Error {error?.code || '404'})</h1>
+                <p className="mt-2">{error?.message || 'Data booking mungkin tidak ada atau Anda tidak memiliki akses.'}</p>
+                <Link href="/tenant/bookings" className="mt-4 inline-block text-blue-600 underline">Kembali ke Daftar</Link>
+            </div>
+        )
     }
 
     // 4. Fetch owner profile separately to be safe

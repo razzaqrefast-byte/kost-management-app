@@ -33,8 +33,17 @@ export default async function OwnerBookingDetailPage({ params }: { params: Promi
         .single()
 
     if (error || !booking) {
-        console.error('Fetch booking detail error:', error)
-        return notFound()
+        console.error('Fetch owner booking detail error:', error)
+        console.error('Booking ID attempted:', bookingId)
+        console.error('User ID:', user.id)
+        // Temporary: show error instead of 404 to debug
+        return (
+            <div className="p-8 text-center text-red-500">
+                <h1 className="text-xl font-bold">Booking Tidak Ditemukan (Error {error?.code || '404'})</h1>
+                <p className="mt-2">{error?.message || 'Data booking mungkin tidak ada atau Anda tidak memiliki akses.'}</p>
+                <Link href="/owner/bookings" className="mt-4 inline-block text-blue-600 underline">Kembali ke Daftar</Link>
+            </div>
+        )
     }
 
     // 3. Fetch messages
