@@ -1,7 +1,5 @@
 'use client'
 
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { FileDown, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -33,30 +31,9 @@ export default function ExportReportButton({
         try {
             setIsExporting(true)
 
-            // Dynamic imports to ensure client-side only and fresh instances
+            // Dynamic import for jsPDF only - no autotable to avoid production bundling issues
             const { jsPDF } = await import('jspdf')
-            const autoTable = (await import('jspdf-autotable')).default
-
             const doc = new jsPDF()
-            const dateStr = new Date().toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            })
-
-            // Title and Header
-            doc.setFontSize(20)
-            doc.setTextColor(37, 99, 235) // Blue color
-            doc.text('KostKu - Laporan Keuangan', 14, 22)
-
-            doc.setFontSize(10)
-            doc.setTextColor(107, 114, 128)
-            doc.text(`Dicetak pada: ${dateStr}`, 14, 30)
-
-            // Summary Section
-            doc.setFontSize(14)
-            doc.setTextColor(31, 41, 55)
-            doc.text('Ringkasan Keuangan', 14, 45)
 
             const formatIDR = (amount: number) => {
                 return new Intl.NumberFormat('id-ID', {
@@ -66,43 +43,119 @@ export default function ExportReportButton({
                 }).format(amount)
             }
 
-            const summaryData = [
-                ['Total Pendapatan (Terverifikasi)', formatIDR(verifiedRevenue)],
-                ['Menunggu Verifikasi', formatIDR(pendingRevenue)],
-                ['Proyeksi Total Pendapatan', formatIDR(totalProjected)]
+            const dateStr = new Date().toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            })
+
+            // --- Header ---
+            doc.setFontSize(22)
+            doc.setTextColor(37, 99, 235) // Blue-600
+            doc.text('KostKu', 14, 20)
+
+            doc.setFontSize(14)
+            doc.setTextColor(31, 41, 55) // Gray-800
+            doc.text('Laporan Keuangan', 14, 28)
+
+            doc.setFontSize(9)
+            doc.setTextColor(107, 114, 128) // Gray-500
+            doc.text(`Dicetak pada: ${dateStr}`, 14, 34)
+
+            doc.setDrawColor(229, 231, 235) // Gray-200
+            doc.line(14, 38, 196, 38)
+
+            // --- Summary Section ---
+            doc.setFontSize(12)
+            doc.setTextColor(31, 41, 55)
+            doc.text('Ringkasan Pendapatan', 14, 48)
+
+            // Table Header Background
+            doc.setFillColor(249, 250, 251) // Gray-50
+            doc.rect(14, 52, 182, 8, 'F')
+
+            doc.setFontSize(10)
+            doc.setTextColor(75, 85, 99) // Gray-600
+            doc.text('Kategori', 18, 57)
+            doc.text('Jumlah', 140, 57)
+
+            // Rows
+            let currentY = 66
+            const summaryRows = [
+                { label: 'Total Pendapatan (Terverifikasi)', value: formatIDR(verifiedRevenue), color: [22, 163, 74] }, // Green
+                { label: 'Menunggu Verifikasi', value: formatIDR(pendingRevenue), color: [202, 138, 4] }, // Yellow
+                { label: 'Proyeksi Total Pendapatan', value: formatIDR(totalProjected), color: [37, 99, 235] } // Blue
             ]
 
-            autoTable(doc, {
-                startY: 50,
-                head: [['Kategori', 'Jumlah']],
-                body: summaryData,
-                theme: 'striped',
-                headStyles: { fillColor: [59, 130, 246] }
+            summaryRows.forEach((row) => {
+                doc.setTextColor(75, 85, 99)
+                doc.text(row.label, 18, currentY)
+                doc.setTextColor(row.color[0], row.color[1], row.color[2])
+                doc.text(row.value, 140, currentY)
+
+                doc.setDrawColor(243, 244, 246)
+                doc.line(14, currentY + 3, 196, currentY + 3)
+                currentY += 10
             })
 
-            // Detailed Transactions
-            const lastY = (doc as any).lastAutoTable?.finalY || 80
-            const finalY = lastY + 15
-            doc.setFontSize(14)
+            // --- Transactions Section ---
+            currentY += 10
+            if (currentY > 250) {
+                doc.addPage()
+                currentY = 20
+            }
+
+            doc.setFontSize(12)
             doc.setTextColor(31, 41, 55)
-            doc.text('Rincian Transaksi', 14, finalY)
+            doc.text('Rincian Transaksi', 14, currentY)
+            currentY += 5
 
-            const tableData = payments.map(p => [
-                p.property_name,
-                `${p.period_month} ${p.period_year}`,
-                formatIDR(p.amount),
-                p.status === 'verified' ? 'Terverifikasi' : 'Menunggu'
-            ])
+            // Table Header
+            doc.setFillColor(37, 99, 235) // Blue-600
+            doc.rect(14, currentY, 182, 10, 'F')
 
-            autoTable(doc, {
-                startY: finalY + 5,
-                head: [['Properti', 'Periode', 'Jumlah', 'Status']],
-                body: tableData,
-                theme: 'grid',
-                headStyles: { fillColor: [37, 99, 235] }
+            doc.setFontSize(9)
+            doc.setTextColor(255, 255, 255)
+            doc.text('Properti', 18, currentY + 6)
+            doc.text('Periode', 80, currentY + 6)
+            doc.text('Jumlah', 130, currentY + 6)
+            doc.text('Status', 170, currentY + 6)
+            currentY += 10
+
+            // Transaction Rows
+            doc.setTextColor(55, 65, 81)
+            payments.forEach((p, index) => {
+                // Page break check
+                if (currentY > 275) {
+                    doc.addPage()
+                    currentY = 20
+                    // Redraw header on new page
+                    doc.setFillColor(37, 99, 235)
+                    doc.rect(14, currentY, 182, 10, 'F')
+                    doc.setTextColor(255, 255, 255)
+                    doc.text('Properti', 18, currentY + 6)
+                    doc.text('Periode', 80, currentY + 6)
+                    doc.text('Jumlah', 130, currentY + 6)
+                    doc.text('Status', 170, currentY + 6)
+                    currentY += 10
+                    doc.setTextColor(55, 65, 81)
+                }
+
+                // Striped background
+                if (index % 2 === 1) {
+                    doc.setFillColor(249, 250, 251)
+                    doc.rect(14, currentY, 182, 8, 'F')
+                }
+
+                doc.text((p.property_name || 'Properti').substring(0, 30), 18, currentY + 5)
+                doc.text(`${p.period_month} ${p.period_year}`, 80, currentY + 5)
+                doc.text(formatIDR(p.amount), 130, currentY + 5)
+                doc.text(p.status === 'verified' ? 'Sukses' : 'Pending', 170, currentY + 5)
+
+                currentY += 8
             })
 
-            // Footer
+            // --- Footer ---
             const pageCount = doc.getNumberOfPages()
             for (let i = 1; i <= pageCount; i++) {
                 doc.setPage(i)
@@ -110,8 +163,8 @@ export default function ExportReportButton({
                 doc.setTextColor(156, 163, 175)
                 doc.text(
                     `Halaman ${i} dari ${pageCount} - KostKu Management App`,
-                    doc.internal.pageSize.getWidth() / 2,
-                    doc.internal.pageSize.getHeight() - 10,
+                    105,
+                    285,
                     { align: 'center' }
                 )
             }
@@ -119,7 +172,7 @@ export default function ExportReportButton({
             doc.save(`Laporan_Keuangan_KostKu_${new Date().toISOString().split('T')[0]}.pdf`)
         } catch (error) {
             console.error('Export PDF error:', error)
-            alert('Terjadi kesalahan saat mengekspor laporan: ' + (error instanceof Error ? error.stack || error.message : String(error)))
+            alert('Terjadi kesalahan saat mengekspor laporan: ' + (error instanceof Error ? error.message : String(error)))
         } finally {
             setIsExporting(false)
         }
