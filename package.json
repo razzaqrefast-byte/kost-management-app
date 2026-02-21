@@ -13,7 +13,6 @@
     "@supabase/supabase-js": "^2.95.3",
     "@types/uuid": "^10.0.0",
     "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
