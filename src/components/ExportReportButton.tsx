@@ -32,6 +32,11 @@ export default function ExportReportButton({
     const handleExport = async () => {
         try {
             setIsExporting(true)
+
+            // Dynamic imports to ensure client-side only and fresh instances
+            const { jsPDF } = await import('jspdf')
+            const autoTable = (await import('jspdf-autotable')).default
+
             const doc = new jsPDF()
             const dateStr = new Date().toLocaleDateString('id-ID', {
                 day: 'numeric',
@@ -76,7 +81,7 @@ export default function ExportReportButton({
             })
 
             // Detailed Transactions
-            const lastY = (doc as any).lastAutoTable.finalY || 80
+            const lastY = (doc as any).lastAutoTable?.finalY || 80
             const finalY = lastY + 15
             doc.setFontSize(14)
             doc.setTextColor(31, 41, 55)
@@ -114,7 +119,7 @@ export default function ExportReportButton({
             doc.save(`Laporan_Keuangan_KostKu_${new Date().toISOString().split('T')[0]}.pdf`)
         } catch (error) {
             console.error('Export PDF error:', error)
-            alert('Terjadi kesalahan saat mengekspor laporan: ' + (error instanceof Error ? error.message : String(error)))
+            alert('Terjadi kesalahan saat mengekspor laporan: ' + (error instanceof Error ? error.stack || error.message : String(error)))
         } finally {
             setIsExporting(false)
         }
@@ -123,10 +128,15 @@ export default function ExportReportButton({
     return (
         <button
             onClick={handleExport}
-            className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-all active:scale-95"
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-            <FileDown className="h-4 w-4" />
-            Cetak PDF
+            {isExporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+                <FileDown className="h-4 w-4" />
+            )}
+            {isExporting ? 'Memproses...' : 'Cetak PDF'}
         </button>
     )
 }
