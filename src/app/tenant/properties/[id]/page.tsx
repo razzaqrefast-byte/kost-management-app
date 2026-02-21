@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import CopyAddressButton from '@/components/CopyAddressButton'
+import PropertyLocation from '@/components/PropertyLocation'
 
 export default async function TenantPropertyDetailsPage({
     params,
@@ -15,6 +17,8 @@ export default async function TenantPropertyDetailsPage({
         .from('properties')
         .select(`
             *,
+            latitude,
+            longitude,
             reviews (
                 rating,
                 comment,
@@ -87,10 +91,15 @@ export default async function TenantPropertyDetailsPage({
                         )}
                     </div>
 
-                    <div className="mt-3">
-                        <h2 className="sr-only">Alamat</h2>
-                        <p className="text-xl text-gray-700 dark:text-gray-300">{property.address}</p>
+                    <div className="mt-3 flex items-start justify-between gap-4">
+                        <div>
+                            <h2 className="sr-only">Alamat</h2>
+                            <p className="text-xl text-gray-700 dark:text-gray-300">{property.address}</p>
+                        </div>
+                        <CopyAddressButton address={property.address} />
                     </div>
+
+                    <PropertyLocation property={property as any} />
 
                     <div className="mt-6">
                         <h3 className="text-sm font-medium text-gray-900 dark:text-white">Deskripsi</h3>

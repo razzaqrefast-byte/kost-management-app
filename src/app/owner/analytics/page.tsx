@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import ExportReportButton from '@/components/ExportReportButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +48,16 @@ export default async function OwnerAnalyticsPage() {
 
     const totalProjected = verifiedRevenue + pendingRevenue
 
+    // 4. Flatten payments for export
+    const flattenedPayments = payments?.map((p: any) => ({
+        id: p.id,
+        amount: Number(p.amount),
+        status: p.status,
+        period_month: p.period_month,
+        period_year: p.period_year,
+        property_name: p.bookings?.rooms?.properties?.name || 'Unknown'
+    })) || []
+
     // Format currency
     const formatIDR = (amount: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -64,6 +75,14 @@ export default async function OwnerAnalyticsPage() {
                         Laporan Keuangan
                     </h2>
                     <p className="mt-1 text-sm text-gray-500">Analisis pendapatan dan performa kost Anda.</p>
+                </div>
+                <div className="mt-4 flex md:ml-4 md:mt-0">
+                    <ExportReportButton
+                        verifiedRevenue={verifiedRevenue}
+                        pendingRevenue={pendingRevenue}
+                        totalProjected={totalProjected}
+                        payments={flattenedPayments}
+                    />
                 </div>
             </div>
 

@@ -4,20 +4,34 @@ import PropertySearch from './PropertySearch'
 export default async function TenantDashboard() {
     const supabase = await createClient()
 
-    // Fetch properties with room counts, prices, and review ratings
-    const { data: properties, error } = await supabase
+    // 1. Fetch properties
+    const { data: propertiesRaw, error: propError } = await supabase
         .from('properties')
-        .select(`
-            *,
-            rooms (
-                count,
-                price_monthly
-            ),
-            reviews (
-                rating
-            )
-        `)
+        .select('id, name, address, description, image_url, latitude, longitude')
         .order('created_at', { ascending: false })
+
+    if (propError) {
+        console.error('Fetch properties error:', propError)
+    }
+
+    // 2. Fetch all rooms for these properties
+    const { data: roomsData } = await supabase
+        .from('rooms')
+        .select('property_id, price_monthly')
+
+    // 3. Fetch all reviews for these properties
+    const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('property_id, rating')
+
+    // 4. Combine data
+    const properties = propertiesRaw?.map(prop => ({
+        ...prop,
+        rooms: roomsData?.filter(r => r.property_id === prop.id) || [],
+        reviews: reviewsData?.filter(rv => rv.property_id === prop.id) || []
+    })) || []
+
+    const error = propError
 
     if (error) {
         console.error('Fetch properties error:', error)
