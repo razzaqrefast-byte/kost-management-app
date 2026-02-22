@@ -132,14 +132,16 @@ export async function getMyPayments() {
             .from('payments')
             .select(`
                 *,
-                bookings(
+                bookings!inner(
                     id,
+                    tenant_id,
                     rooms(
                         name,
                         properties(name)
                     )
                 )
             `)
+            .eq('bookings.tenant_id', user.id)
             .order('created_at', { ascending: false })
 
         // If table doesn't exist yet, return empty array
@@ -148,12 +150,7 @@ export async function getMyPayments() {
             return { payments: [], error: 'Tabel pembayaran belum dibuat. Silakan jalankan setup_payments.sql di Supabase.' }
         }
 
-        // Filter for user's bookings
-        const myPayments = payments?.filter((p: any) => {
-            return p.bookings?.id
-        }) || []
-
-        return { payments: myPayments }
+        return { payments: payments || [] }
     } catch (err) {
         console.error('Unexpected error in getMyPayments:', err)
         return { payments: [], error: 'Tabel pembayaran belum dibuat. Silakan jalankan setup_payments.sql di Supabase.' }
