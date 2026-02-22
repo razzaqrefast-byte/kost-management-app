@@ -24,11 +24,19 @@ export default async function TenantDashboard() {
         .from('reviews')
         .select('property_id, rating')
 
+    // Fetch user wishlists to set initial state
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: wishlistData } = user
+        ? await supabase.from('wishlists').select('property_id').eq('tenant_id', user.id)
+        : { data: [] }
+    const savedPropertyIds = new Set(wishlistData?.map(w => w.property_id) || [])
+
     // 4. Combine data
     const properties = propertiesRaw?.map(prop => ({
         ...prop,
         rooms: roomsData?.filter(r => r.property_id === prop.id) || [],
-        reviews: reviewsData?.filter(rv => rv.property_id === prop.id) || []
+        reviews: reviewsData?.filter(rv => rv.property_id === prop.id) || [],
+        isSaved: savedPropertyIds.has(prop.id)
     })) || []
 
     const error = propError

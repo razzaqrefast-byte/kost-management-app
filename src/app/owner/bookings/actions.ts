@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from '@/app/actions/notifications'
 
 export async function updateBookingStatus(
     bookingId: string,
@@ -22,9 +23,12 @@ export async function updateBookingStatus(
         .select(`
             id,
             room_id,
+            tenant_id,
             rooms (
+                name,
                 property_id,
                 properties (
+                    name,
                     owner_id
                 )
             )
@@ -75,6 +79,31 @@ export async function updateBookingStatus(
             console.error('Update room error:', roomError)
         }
     }
+
+    // 5. Send Notification to Tenant
+    const roomName = (booking.rooms as any).name
+    const propertyName = (booking.rooms as any).properties.name
+
+    let notifTitle = ''
+    let notifMessage = ''
+
+    if (status === 'approved') {
+        notifTitle = 'Booking Disetujui! 🎉'
+        notifMessage = `Booking Anda untuk ${roomName} di ${propertyName} telah disetujui. Silakan lengkapi biodata dan lakukan pembayaran.`
+    } else if (status === 'cancelled') {
+        notifTitle = 'Booking Dibatalkan ❌'
+        notifMessage = `Booking Anda untuk ${roomName} di ${propertyName} dibatalkan. Alasan: ${rejectionReason || 'Tidak disebutkan'}`
+    } else if (status === 'completed') {
+        notifTitle = 'Masa Sewa Selesai 🏠'
+        notifMessage = `Masa sewa Anda untuk ${roomName} di ${propertyName} telah selesai. Terima kasih!`
+    }
+
+    await createNotification({
+        userId: booking.tenant_id,
+        title: notifTitle,
+        message: notifMessage,
+        link: '/tenant/bookings'
+    })
 
     revalidatePath('/owner/bookings')
     revalidatePath('/tenant/bookings')

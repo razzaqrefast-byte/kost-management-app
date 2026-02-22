@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from '@/app/actions/notifications'
 
 export async function verifyPayment(paymentId: string) {
     const supabase = await createClient()
@@ -12,7 +13,7 @@ export async function verifyPayment(paymentId: string) {
     }
 
     // Update payment status
-    const { error } = await supabase
+    const { data: updatedPayment, error } = await supabase
         .from('payments')
         .update({
             status: 'verified',
@@ -20,10 +21,36 @@ export async function verifyPayment(paymentId: string) {
             verified_at: new Date().toISOString()
         })
         .eq('id', paymentId)
+        .select(`
+            amount, period_month, period_year,
+            bookings(
+                tenant_id,
+                rooms(
+                    name,
+                    properties(name)
+                )
+            )
+        `)
+        .single()
 
     if (error) {
         console.error('Verify payment error:', error)
         return { error: 'Gagal memverifikasi pembayaran: ' + error.message }
+    }
+
+    // Notify Tenant
+    if (updatedPayment && updatedPayment.bookings) {
+        const tenantId = (updatedPayment.bookings as any).tenant_id
+        const roomName = (updatedPayment.bookings as any).rooms?.name
+        const propertyName = (updatedPayment.bookings as any).rooms?.properties?.name
+        const amountFormatted = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(updatedPayment.amount)
+
+        await createNotification({
+            userId: tenantId,
+            title: 'Pembayaran Diterima ✅',
+            message: `Pembayaran ${amountFormatted} untuk ${roomName} (${propertyName}) periode ${updatedPayment.period_month}/${updatedPayment.period_year} telah diverifikasi.`,
+            link: '/tenant/payments'
+        })
     }
 
     revalidatePath('/owner/payments')
@@ -42,7 +69,7 @@ export async function rejectPayment(paymentId: string, reason: string) {
         return { error: 'Alasan penolakan wajib diisi.' }
     }
 
-    const { error } = await supabase
+    const { data: updatedPayment, error } = await supabase
         .from('payments')
         .update({
             status: 'rejected',
@@ -51,10 +78,35 @@ export async function rejectPayment(paymentId: string, reason: string) {
             verified_at: new Date().toISOString()
         })
         .eq('id', paymentId)
+        .select(`
+            amount, period_month, period_year,
+            bookings(
+                tenant_id,
+                rooms(
+                    name,
+                    properties(name)
+                )
+            )
+        `)
+        .single()
 
     if (error) {
         console.error('Reject payment error:', error)
         return { error: 'Gagal menolak pembayaran: ' + error.message }
+    }
+
+    // Notify Tenant
+    if (updatedPayment && updatedPayment.bookings) {
+        const tenantId = (updatedPayment.bookings as any).tenant_id
+        const roomName = (updatedPayment.bookings as any).rooms?.name
+        const propertyName = (updatedPayment.bookings as any).rooms?.properties?.name
+
+        await createNotification({
+            userId: tenantId,
+            title: 'Pembayaran Ditolak ❌',
+            message: `Pembayaran untuk ${roomName} (${propertyName}) periode ${updatedPayment.period_month}/${updatedPayment.period_year} ditolak. Alasan: ${reason}`,
+            link: '/tenant/payments'
+        })
     }
 
     revalidatePath('/owner/payments')

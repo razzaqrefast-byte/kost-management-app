@@ -1,5 +1,7 @@
 import { getMyActiveBookings, getMyPayments } from './actions'
 import Link from 'next/link'
+import DownloadInvoiceButton from '@/components/DownloadInvoiceButton'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,8 +9,15 @@ export default async function TenantPaymentsPage() {
     let bookings: any[] = []
     let payments: any[] = []
     let paymentsError: string | undefined
+    let tenantName = 'Penghuni'
 
     try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            tenantName = user.user_metadata?.full_name || 'Penghuni'
+        }
+
         const bookingsResult = await getMyActiveBookings()
         bookings = bookingsResult.bookings || []
 
@@ -124,10 +133,15 @@ export default async function TenantPaymentsPage() {
                                             Rp {Number(payment.amount).toLocaleString('id-ID')}
                                         </td>
                                         <td className="whitespace-nowrap px-3 py-4 text-sm">
-                                            {statusBadge(payment.status)}
-                                            {payment.status === 'rejected' && payment.rejection_reason && (
-                                                <div className="mt-1 text-xs text-red-600 italic">{payment.rejection_reason}</div>
-                                            )}
+                                            <div className="flex flex-col items-start gap-2">
+                                                {statusBadge(payment.status)}
+                                                {payment.status === 'rejected' && payment.rejection_reason && (
+                                                    <div className="text-xs text-red-600 italic">{payment.rejection_reason}</div>
+                                                )}
+                                                {payment.status === 'verified' && (
+                                                    <DownloadInvoiceButton payment={payment} tenantName={tenantName} />
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                                             {new Date(payment.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}

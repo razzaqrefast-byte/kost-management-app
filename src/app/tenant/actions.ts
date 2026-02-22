@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { createNotification } from '@/app/actions/notifications'
 
 export async function createBooking(roomId: string, formData: FormData) {
     const supabase = await createClient()
@@ -21,10 +22,18 @@ export async function createBooking(roomId: string, formData: FormData) {
         return { error: 'Data booking tidak lengkap.' }
     }
 
-    // 3. Fetch room price
+    // 3. Fetch room price and owner id
     const { data: room, error: roomError } = await supabase
         .from('rooms')
-        .select('price_monthly, property_id')
+        .select(`
+            price_monthly, 
+            property_id,
+            name,
+            properties (
+                name,
+                owner_id
+            )
+        `)
         .eq('id', roomId)
         .single()
 
@@ -55,6 +64,16 @@ export async function createBooking(roomId: string, formData: FormData) {
 
     if (bookingError) {
         return { error: `Gagal membuat booking: ${bookingError.message}` }
+    }
+
+    // 6. Notify Owner
+    if (room.properties && (room.properties as any).owner_id) {
+        await createNotification({
+            userId: (room.properties as any).owner_id,
+            title: 'Booking Baru Masuk! 🔔',
+            message: `Ada pengajuan booking baru (Pending) untuk kamar ${room.name} di ${(room.properties as any).name}.`,
+            link: `/owner/bookings`
+        })
     }
 
     revalidatePath('/tenant/bookings')

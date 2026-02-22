@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Map as MapIcon, List as ListIcon } from 'lucide-react'
+import WishlistButton from '@/components/WishlistButton'
 
 // Dynamically import the MapWrapper
 const MapWrapper = dynamic(() => import('@/components/MapWrapper'), {
@@ -26,6 +27,7 @@ interface Property {
     longitude: number | null
     rooms: Room[]
     reviews: { rating: number }[]
+    isSaved?: boolean
 }
 
 export default function PropertySearch({ initialProperties }: { initialProperties: Property[] }) {
@@ -172,6 +174,9 @@ export default function PropertySearch({ initialProperties }: { initialPropertie
                                                 <span className="inline-flex items-center rounded-full bg-white/90 dark:bg-gray-900/90 px-2.5 py-0.5 text-xs font-bold text-gray-900 dark:text-white shadow-sm backdrop-blur-sm">
                                                     {property.rooms.length} Tipe Kamar
                                                 </span>
+                                            </div>
+                                            <div className="absolute top-3 right-3 z-10">
+                                                <WishlistButton propertyId={property.id} initialIsSaved={property.isSaved} />
                                             </div>
                                         </div>
                                         <div className="p-5">

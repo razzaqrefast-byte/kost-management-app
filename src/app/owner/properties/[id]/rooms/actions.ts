@@ -60,6 +60,7 @@ export async function updateRoom(propertyId: string, roomId: string, formData: F
     const name = formData.get('name') as string
     const price = formData.get('price') as string
     const isOccupied = formData.get('isOccupied') === 'on'
+    const manualStatus = formData.get('manualStatus') as string || 'available'
     const imageUrl = formData.get('imageUrl') as string
     const facilitiesRaw = formData.get('facilities') as string
     const facilities = facilitiesRaw ? facilitiesRaw.split(',').map(f => f.trim()) : []
@@ -76,6 +77,7 @@ export async function updateRoom(propertyId: string, roomId: string, formData: F
             price_monthly: price,
             facilities: facilities,
             is_occupied: isOccupied,
+            manual_status: manualStatus,
             images: imageUrl ? [imageUrl] : []
         })
         .eq('id', roomId)

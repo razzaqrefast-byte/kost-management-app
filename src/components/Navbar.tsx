@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ThemeToggle } from './ThemeToggle'
+import NotificationMenu from './NotificationMenu'
 
 interface NavLink {
     href: string
@@ -57,7 +58,8 @@ export default function Navbar({
 
                     {/* Desktop Logout & Mobile Menu Toggle */}
                     <div className="flex items-center">
-                        <div className="hidden sm:flex items-center gap-x-4">
+                        <div className="hidden sm:flex items-center gap-x-4 mr-4">
+                            <NotificationMenu />
                             <ThemeToggle />
                             <button
                                 onClick={onLogout}
@@ -111,6 +113,10 @@ export default function Navbar({
                         </Link>
                     ))}
                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between px-3">
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Notifikasi</span>
+                        <NotificationMenu />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between px-3">
                         <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Tema</span>
                         <ThemeToggle />
                     </div>

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from '@/app/actions/notifications'
 
 export async function submitPayment(bookingId: string, formData: FormData) {
     const supabase = await createClient()
@@ -15,7 +16,19 @@ export async function submitPayment(bookingId: string, formData: FormData) {
     // 2. Verify booking belongs to user and is active
     const { data: booking, error: bookingError } = await supabase
         .from('bookings')
-        .select('id, tenant_id, status, total_price')
+        .select(`
+            id, 
+            tenant_id, 
+            status, 
+            total_price,
+            rooms(
+                name,
+                properties(
+                    name,
+                    owner_id
+                )
+            )
+        `)
         .eq('id', bookingId)
         .eq('tenant_id', user.id)
         .single()
@@ -87,6 +100,21 @@ export async function submitPayment(bookingId: string, formData: FormData) {
     if (insertError) {
         console.error('Insert payment error:', insertError)
         return { error: 'Gagal menyimpan data pembayaran: ' + insertError.message }
+    }
+
+    // 7. Notify Owner
+    if (booking.rooms && (booking.rooms as any).properties?.owner_id) {
+        const ownerId = (booking.rooms as any).properties.owner_id
+        const propertyName = (booking.rooms as any).properties.name
+        const roomName = (booking.rooms as any).name
+        const amountFormatted = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
+
+        await createNotification({
+            userId: ownerId,
+            title: 'Pembayaran Baru 💰',
+            message: `Tenant di ${roomName} (${propertyName}) telah membayar ${amountFormatted} untuk periode ${periodMonth}/${periodYear}. Menunggu verifikasi.`,
+            link: '/owner/payments'
+        })
     }
 
     revalidatePath('/tenant/payments')

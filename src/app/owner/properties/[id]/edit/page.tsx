@@ -1,42 +1,76 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound, redirect } from 'next/navigation'
-import EditPropertyForm from './EditPropertyForm'
+'use client'
 
-export default async function EditPropertyPage({
-    params,
-}: {
-    params: Promise<{ id: string }>
-}) {
-    const supabase = await createClient()
-    const { id } = await params
+import { updateProperty } from '../../actions'
+import { useState, useEffect, use } from 'react'
+import PropertyForm from '@/components/PropertyForm'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
-    // 1. Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/login')
+export default function EditPropertyPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params)
+    const [loading, setLoading] = useState(false)
+    const [fetching, setFetching] = useState(true)
+    const [property, setProperty] = useState<any>(null)
+    const [error, setError] = useState<string | null>(null)
+    const router = useRouter()
 
-    // 2. Fetch property and verify ownership
-    const { data: property, error } = await supabase
-        .from('properties')
-        .select('*')
-        .eq('id', id)
-        .eq('owner_id', user.id)
-        .single()
+    useEffect(() => {
+        async function fetchProperty() {
+            const supabase = createClient()
+            const { data, error } = await supabase
+                .from('properties')
+                .select('*')
+                .eq('id', id)
+                .single()
+
+            if (error) {
+                setError('Properti tidak ditemukan.')
+            } else {
+                setProperty(data)
+            }
+            setFetching(false)
+        }
+
+        fetchProperty()
+    }, [id])
+
+    async function handleSubmit(formData: FormData) {
+        setLoading(true)
+        const result = await updateProperty(id, formData)
+        setLoading(false)
+        return result
+    }
+
+    if (fetching) {
+        return (
+            <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+        )
+    }
 
     if (error || !property) {
-        notFound()
+        return (
+            <div className="max-w-2xl mx-auto py-8 px-4 text-center">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Oops!</h2>
+                <p className="mt-2 text-gray-600 dark:text-gray-400">{error || 'Gagal memuat data properti.'}</p>
+                <button
+                    onClick={() => router.push('/owner/properties')}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-500"
+                >
+                    Kembali
+                </button>
+            </div>
+        )
     }
 
     return (
-        <div className="max-w-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            <div className="md:flex md:items-center md:justify-between mb-8">
-                <div className="min-w-0 flex-1">
-                    <h2 className="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">
-                        Edit Properti: {property.name}
-                    </h2>
-                </div>
-            </div>
-
-            <EditPropertyForm property={property} />
-        </div>
+        <PropertyForm
+            initialData={property}
+            onSubmit={handleSubmit}
+            loading={loading}
+            title="Edit Kost"
+            buttonText="Simpan Perubahan"
+        />
     )
 }

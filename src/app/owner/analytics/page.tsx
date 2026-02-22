@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ExportReportButton from '@/components/ExportReportButton'
+import AddExpenseForm from '@/components/AddExpenseForm'
+import { getExpenses } from '@/app/actions/expenses'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,8 +36,30 @@ export default async function OwnerAnalyticsPage() {
         .eq('bookings.rooms.properties.owner_id', user.id)
 
     if (error) {
-        console.error('Fetch analytics error:', error)
+        console.error('Fetch payments error:', error)
     }
+
+    // 2b. Fetch maintenance costs (expenses)
+    const { data: maintenanceReqs, error: maintError } = await supabase
+        .from('maintenance_requests')
+        .select(`
+            id,
+            cost,
+            rooms!inner (
+                properties!inner (
+                    owner_id
+                )
+            )
+        `)
+        .eq('rooms.properties.owner_id', user.id)
+
+    if (maintError) {
+        console.error('Fetch maintenance error:', maintError)
+    }
+
+    // 2c. Fetch manual expenses
+    const { data: manualExpensesData } = await getExpenses()
+    const manualExpenses = manualExpensesData || []
 
     // 3. Calculate statistics
     const verifiedRevenue = payments
@@ -47,6 +71,15 @@ export default async function OwnerAnalyticsPage() {
         .reduce((sum, p) => sum + Number(p.amount), 0) || 0
 
     const totalProjected = verifiedRevenue + pendingRevenue
+
+    // Maintenance cost calculation
+    const maintenanceExpenses = maintenanceReqs?.reduce((sum, req) => sum + (req.cost || 0), 0) || 0
+    // Manual expense calculation
+    const manualTotalExpenses = manualExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0)
+    // Combined total expenses
+    const totalExpenses = maintenanceExpenses + manualTotalExpenses
+
+    const netProfit = verifiedRevenue - totalExpenses
 
     // 4. Flatten payments for export
     const flattenedPayments = payments?.map((p: any) => ({
@@ -76,18 +109,22 @@ export default async function OwnerAnalyticsPage() {
                     </h2>
                     <p className="mt-1 text-sm text-gray-500">Analisis pendapatan dan performa kost Anda.</p>
                 </div>
-                <div className="mt-4 flex md:ml-4 md:mt-0">
+                <div className="mt-4 flex md:ml-4 md:mt-0 gap-3">
+                    <AddExpenseForm />
                     <ExportReportButton
                         verifiedRevenue={verifiedRevenue}
                         pendingRevenue={pendingRevenue}
                         totalProjected={totalProjected}
+                        totalExpenses={totalExpenses}
+                        netProfit={netProfit}
                         payments={flattenedPayments}
+                        manualExpenses={manualExpenses}
                     />
                 </div>
             </div>
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
                 <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border-l-4 border-green-500">
                     <div className="p-5">
                         <div className="flex items-center">
@@ -98,8 +135,44 @@ export default async function OwnerAnalyticsPage() {
                             </div>
                             <div className="ml-5 w-0 flex-1">
                                 <dl>
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Pendapatan (Verified)</dt>
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Pendapatan Kotor</dt>
                                     <dd className="text-lg font-bold text-gray-900 dark:text-white">{formatIDR(verifiedRevenue)}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border-l-4 border-red-500">
+                    <div className="p-5">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                                </svg>
+                            </div>
+                            <div className="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Pengeluaran</dt>
+                                    <dd className="text-lg font-bold text-gray-900 dark:text-white">{formatIDR(totalExpenses)}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border-l-4 border-teal-500">
+                    <div className="p-5">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                            </div>
+                            <div className="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Laba Bersih (Net Profit)</dt>
+                                    <dd className="text-lg font-bold text-gray-900 dark:text-white">{formatIDR(netProfit)}</dd>
                                 </dl>
                             </div>
                         </div>
@@ -118,24 +191,6 @@ export default async function OwnerAnalyticsPage() {
                                 <dl>
                                     <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Menunggu Verifikasi</dt>
                                     <dd className="text-lg font-bold text-gray-900 dark:text-white">{formatIDR(pendingRevenue)}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border-l-4 border-blue-500">
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                                </svg>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Proyeksi Pendapatan</dt>
-                                    <dd className="text-lg font-bold text-gray-900 dark:text-white">{formatIDR(totalProjected)}</dd>
                                 </dl>
                             </div>
                         </div>
@@ -190,6 +245,6 @@ export default async function OwnerAnalyticsPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

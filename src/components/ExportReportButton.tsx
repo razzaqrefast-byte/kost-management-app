@@ -16,14 +16,20 @@ interface ExportReportButtonProps {
     verifiedRevenue: number
     pendingRevenue: number
     totalProjected: number
+    totalExpenses: number
+    netProfit: number
     payments: PaymentItem[]
+    manualExpenses?: any[]
 }
 
 export default function ExportReportButton({
     verifiedRevenue,
     pendingRevenue,
     totalProjected,
-    payments
+    totalExpenses,
+    netProfit,
+    payments,
+    manualExpenses = []
 }: ExportReportButtonProps) {
     const [isExporting, setIsExporting] = useState(false)
 
@@ -82,7 +88,9 @@ export default function ExportReportButton({
             // Rows
             let currentY = 66
             const summaryRows = [
-                { label: 'Total Pendapatan (Terverifikasi)', value: formatIDR(verifiedRevenue), color: [22, 163, 74] }, // Green
+                { label: 'Pendapatan Kotor (Terverifikasi)', value: formatIDR(verifiedRevenue), color: [22, 163, 74] }, // Green
+                { label: 'Total Pengeluaran (Maintenance)', value: formatIDR(totalExpenses), color: [220, 38, 38] }, // Red
+                { label: 'Laba Bersih (Net Profit)', value: formatIDR(netProfit), color: [13, 148, 136] }, // Teal
                 { label: 'Menunggu Verifikasi', value: formatIDR(pendingRevenue), color: [202, 138, 4] }, // Yellow
                 { label: 'Proyeksi Total Pendapatan', value: formatIDR(totalProjected), color: [37, 99, 235] } // Blue
             ]
@@ -154,6 +162,63 @@ export default function ExportReportButton({
 
                 currentY += 8
             })
+
+            // --- Transactions Section (Operational Expenses) ---
+            if (manualExpenses.length > 0) {
+                currentY += 10
+                if (currentY > 250) {
+                    doc.addPage()
+                    currentY = 20
+                }
+
+                doc.setFontSize(12)
+                doc.setTextColor(31, 41, 55)
+                doc.text('Rincian Beban Operasional', 14, currentY)
+                currentY += 5
+
+                // Table Header
+                doc.setFillColor(220, 38, 38) // Red-600
+                doc.rect(14, currentY, 182, 10, 'F')
+
+                doc.setFontSize(9)
+                doc.setTextColor(255, 255, 255)
+                doc.text('Tanggal', 18, currentY + 6)
+                doc.text('Kategori', 50, currentY + 6)
+                doc.text('Keterangan', 90, currentY + 6)
+                doc.text('Jumlah', 150, currentY + 6)
+                currentY += 10
+
+                // Expense Rows
+                doc.setTextColor(55, 65, 81)
+                manualExpenses.forEach((exp, index) => {
+                    if (currentY > 275) {
+                        doc.addPage()
+                        currentY = 20
+                        doc.setFillColor(220, 38, 38)
+                        doc.rect(14, currentY, 182, 10, 'F')
+                        doc.setTextColor(255, 255, 255)
+                        doc.text('Tanggal', 18, currentY + 6)
+                        doc.text('Kategori', 50, currentY + 6)
+                        doc.text('Keterangan', 90, currentY + 6)
+                        doc.text('Jumlah', 150, currentY + 6)
+                        currentY += 10
+                        doc.setTextColor(55, 65, 81)
+                    }
+
+                    if (index % 2 === 1) {
+                        doc.setFillColor(249, 250, 251)
+                        doc.rect(14, currentY, 182, 8, 'F')
+                    }
+
+                    const expDate = new Date(exp.expense_date).toLocaleDateString('id-ID')
+                    doc.text(expDate, 18, currentY + 5)
+                    doc.text(exp.category, 50, currentY + 5)
+                    doc.text((exp.description || '-').substring(0, 30), 90, currentY + 5)
+                    doc.text(formatIDR(exp.amount), 150, currentY + 5)
+
+                    currentY += 8
+                })
+            }
 
             // --- Footer ---
             const pageCount = doc.getNumberOfPages()

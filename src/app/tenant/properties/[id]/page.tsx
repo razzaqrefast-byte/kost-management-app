@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import CopyAddressButton from '@/components/CopyAddressButton'
 import PropertyLocation from '@/components/PropertyLocation'
+import WishlistButton from '@/components/WishlistButton'
+import { getWishlistStatus } from '@/app/tenant/wishlist/actions'
 
 export default async function TenantPropertyDetailsPage({
     params,
@@ -44,6 +46,9 @@ export default async function TenantPropertyDetailsPage({
         .eq('is_occupied', false)
         .order('name', { ascending: true })
 
+    // 3. Fetch Wishlist Status
+    const isSaved = await getWishlistStatus(id)
+
     const reviews = property.reviews || []
     const averageRating = reviews.length > 0
         ? (reviews.reduce((acc: any, curr: any) => acc + curr.rating, 0) / reviews.length).toFixed(1)
@@ -60,7 +65,10 @@ export default async function TenantPropertyDetailsPage({
 
             <div className="lg:grid lg:grid-cols-2 lg:gap-x-12 lg:items-start">
                 {/* Image Gallery Placeholder */}
-                <div className="aspect-h-3 aspect-w-4 rounded-lg bg-gray-100 overflow-hidden">
+                <div className="relative aspect-h-3 aspect-w-4 rounded-lg bg-gray-100 overflow-hidden">
+                    <div className="absolute top-4 right-4 z-10">
+                        <WishlistButton propertyId={id} initialIsSaved={isSaved} />
+                    </div>
                     {property.image_url ? (
                         <img
                             src={property.image_url}

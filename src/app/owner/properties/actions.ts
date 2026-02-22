@@ -18,6 +18,8 @@ export async function createProperty(formData: FormData) {
     const address = formData.get('address') as string
     const description = formData.get('description') as string
     const imageUrl = formData.get('imageUrl') as string
+    const latitude = formData.get('latitude') ? parseFloat(formData.get('latitude') as string) : null
+    const longitude = formData.get('longitude') ? parseFloat(formData.get('longitude') as string) : null
 
     if (!name || !address) {
         return { error: 'Nama dan Alamat wajib diisi' }
@@ -29,7 +31,9 @@ export async function createProperty(formData: FormData) {
         name,
         address,
         description,
-        image_url: imageUrl || null
+        image_url: imageUrl || null,
+        latitude,
+        longitude
     })
 
     if (error) {
@@ -53,6 +57,8 @@ export async function updateProperty(id: string, formData: FormData) {
     const address = formData.get('address') as string
     const description = formData.get('description') as string
     const imageUrl = formData.get('imageUrl') as string
+    const latitude = formData.get('latitude') ? parseFloat(formData.get('latitude') as string) : null
+    const longitude = formData.get('longitude') ? parseFloat(formData.get('longitude') as string) : null
 
     if (!name || !address) {
         return { error: 'Nama dan Alamat wajib diisi' }
@@ -65,7 +71,9 @@ export async function updateProperty(id: string, formData: FormData) {
             name,
             address,
             description,
-            image_url: imageUrl || null
+            image_url: imageUrl || null,
+            latitude,
+            longitude
         })
         .eq('id', id)
         .eq('owner_id', user.id) // Ensure security
