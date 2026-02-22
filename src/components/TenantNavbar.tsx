@@ -24,6 +24,7 @@ export default function TenantNavbar() {
         { href: '/tenant', label: 'Cari Kost' },
         { href: '/tenant/bookings', label: 'Booking Saya', badge: unreadCount },
         { href: '/tenant/payments', label: 'Pembayaran' },
+        { href: '/tenant/contracts', label: 'Kontrak' },
         { href: '/tenant/maintenance', label: 'Keluhan' },
         { href: '/tenant/profile', label: 'Profil' },
     ]

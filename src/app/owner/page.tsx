@@ -1,166 +1,231 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import RevenueChart from '@/components/RevenueChart'
+
+export const dynamic = 'force-dynamic'
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 
 export default async function OwnerDashboard() {
     const supabase = await createClient()
 
-    // 1. Get current user
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
-    // 2. Fetch statistics
-    // Total Kost (properties owned by this user)
-    const { count: propertyCount } = await supabase
-        .from('properties')
-        .select('*', { count: 'exact', head: true })
-        .eq('owner_id', user.id)
-
-    // Kamar Kosong (rooms in properties owned by this user that are 'available')
-    // First get all property IDs for this owner
+    // ── Fetch properties ───────────────────────────────────────────
     const { data: properties } = await supabase
         .from('properties')
-        .select('id')
+        .select('id, name')
         .eq('owner_id', user.id)
 
     const propertyIds = properties?.map(p => p.id) || []
+    const propertyCount = propertyIds.length
 
-    let roomCount = 0
+    // ── Rooms & Occupancy ──────────────────────────────────────────
+    let totalRooms = 0
+    let occupiedRooms = 0
+    let availableRooms = 0
+    let roomIds: string[] = []
+
     if (propertyIds.length > 0) {
-        const { count } = await supabase
+        const { data: rooms } = await supabase
             .from('rooms')
-            .select('*', { count: 'exact', head: true })
+            .select('id, is_occupied')
             .in('property_id', propertyIds)
-            .eq('is_occupied', false)
-        roomCount = count || 0
+
+        totalRooms = rooms?.length || 0
+        occupiedRooms = rooms?.filter(r => r.is_occupied).length || 0
+        availableRooms = totalRooms - occupiedRooms
+        roomIds = rooms?.map(r => r.id) || []
     }
 
-    // Permintaan Booking (pending bookings for rooms belonging to owner properties)
+    const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0
+
+    // ── Pending Bookings ───────────────────────────────────────────
     let bookingCount = 0
-    if (propertyIds.length > 0) {
-        // Fetch room IDs first for these properties
-        const { data: roomIdsData } = await supabase
-            .from('rooms')
-            .select('id')
-            .in('property_id', propertyIds)
-
-        const roomIds = roomIdsData?.map(r => r.id) || []
-
-        if (roomIds.length > 0) {
-            const { count } = await supabase
-                .from('bookings')
-                .select('*', { count: 'exact', head: true })
-                .in('room_id', roomIds)
-                .eq('status', 'pending')
-            bookingCount = count || 0
-        }
+    if (roomIds.length > 0) {
+        const { count } = await supabase
+            .from('bookings')
+            .select('*', { count: 'exact', head: true })
+            .in('room_id', roomIds)
+            .eq('status', 'pending')
+        bookingCount = count || 0
     }
+
+    // ── Revenue Chart Data (last 6 months) ────────────────────────
+    const now = new Date()
+    const chartData = []
+
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const month = d.getMonth() + 1
+        const year = d.getFullYear()
+
+        // Revenue: verified payments for this month
+        let monthRevenue = 0
+        if (roomIds.length > 0) {
+            const { data: payments } = await supabase
+                .from('payments')
+                .select('amount, bookings!inner(room_id)')
+                .eq('status', 'verified')
+                .eq('period_month', month)
+                .eq('period_year', year)
+                .in('bookings.room_id', roomIds)
+
+            monthRevenue = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
+        }
+
+        // Expenses: manual expenses for this month
+        const monthStart = `${year}-${String(month).padStart(2, '0')}-01`
+        const nextMonth = new Date(year, month, 1)
+        const monthEnd = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`
+
+        const { data: expenses } = await supabase
+            .from('expenses')
+            .select('amount')
+            .eq('owner_id', user.id)
+            .gte('expense_date', monthStart)
+            .lt('expense_date', monthEnd)
+
+        const monthExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
+
+        chartData.push({
+            month: `${MONTH_NAMES[month - 1]} ${year}`,
+            pendapatan: monthRevenue,
+            pengeluaran: monthExpenses,
+        })
+    }
+
+    // ── This Month Revenue ─────────────────────────────────────────
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
+    const currentMonthRevenue = chartData[chartData.length - 1]?.pendapatan || 0
+
+    // ── Unread notifications count ─────────────────────────────────
+    const { count: unreadNotifCount } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false)
+
+    const formatIDR = (amount: number) => new Intl.NumberFormat('id-ID', {
+        style: 'currency', currency: 'IDR', minimumFractionDigits: 0
+    }).format(amount)
 
     return (
-        <div className="px-4 py-8 sm:px-0">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {/* Card 1: Total Kost */}
-                <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                {/* Icon Building */}
-                                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Total Kost</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{propertyCount || 0} Unit</div>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-gray-50 px-5 py-3 dark:bg-gray-700">
-                        <div className="text-sm">
-                            <Link href="/owner/properties" className="font-medium text-blue-700 hover:text-blue-900 dark:text-blue-400">
-                                Lihat semua
-                            </Link>
-                        </div>
-                    </div>
+        <div className="px-4 py-8 sm:px-0 max-w-7xl mx-auto">
+
+            {/* ── Greeting ─────────────────────────────────────────── */}
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Selamat datang! 👋
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                    Berikut ringkasan performa properti Anda hari ini.
+                </p>
+            </div>
+
+            {/* ── Stat Cards ────────────────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-8">
+                {/* Total Properti */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-5 border-l-4 border-blue-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Properti</p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{propertyCount}</p>
+                    <Link href="/owner/properties" className="text-xs text-blue-600 dark:text-blue-400 mt-2 inline-block hover:underline">
+                        Kelola properti →
+                    </Link>
                 </div>
 
-                {/* Card 2: Kamar Kosong */}
-                <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                {/* Icon Key */}
-                                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11.536 11 11.536 11l-3-3 3-3 3-3m0 6a1 1 0 001-1v-3a1 1 0 00-1-1H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Kamar Kosong</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{roomCount} Kamar</div>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
+                {/* Tingkat Hunian */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-5 border-l-4 border-green-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Tingkat Hunian</p>
+                    <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-1">{occupancyRate}%</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{occupiedRooms}/{totalRooms} kamar terisi</p>
                 </div>
 
-                {/* Card 3: Booking Pending */}
-                <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                {/* Icon Inbox */}
-                                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                                </svg>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Permintaan Booking</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900 dark:text-white">{bookingCount}</div>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-gray-50 px-5 py-3 dark:bg-gray-700">
-                        <div className="text-sm">
-                            <Link href="/owner/bookings" className="font-medium text-blue-700 hover:text-blue-900 dark:text-blue-400">
-                                Kelola booking
-                            </Link>
-                        </div>
-                    </div>
+                {/* Booking Pending */}
+                <div className={`bg-white dark:bg-gray-800 rounded-xl shadow p-5 border-l-4 ${bookingCount > 0 ? 'border-yellow-500' : 'border-gray-300'}`}>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Booking Menunggu</p>
+                    <p className={`text-3xl font-bold mt-1 ${bookingCount > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-900 dark:text-white'}`}>{bookingCount}</p>
+                    <Link href="/owner/bookings" className="text-xs text-blue-600 dark:text-blue-400 mt-2 inline-block hover:underline">
+                        Kelola booking →
+                    </Link>
+                </div>
+
+                {/* Pendapatan Bulan Ini */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-5 border-l-4 border-purple-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Pendapatan Bulan Ini</p>
+                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1 truncate">{formatIDR(currentMonthRevenue)}</p>
+                    <Link href="/owner/analytics" className="text-xs text-blue-600 dark:text-blue-400 mt-2 inline-block hover:underline">
+                        Lihat laporan →
+                    </Link>
                 </div>
             </div>
 
-            <div className="mt-8">
-                <div className="rounded-md bg-blue-50 p-4 dark:bg-blue-900/20">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                        <div className="ml-3 flex-1 md:flex md:justify-between">
-                            <p className="text-sm text-blue-700 dark:text-blue-300">
-                                {propertyCount === 0
-                                    ? "Selamat datang! Anda belum menambahkan properti kost. Mulai sewakan kost Anda sekarang."
-                                    : `Anda memiliki ${propertyCount} properti terdaftar. Kelola properti Anda untuk mendapatkan tenant baru.`
-                                }
-                            </p>
-                            <p className="mt-3 text-sm md:ml-6 md:mt-0">
-                                <Link href="/owner/properties/new" className="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600 dark:text-blue-400">
-                                    Tambah Kost Baru <span aria-hidden="true">&rarr;</span>
-                                </Link>
-                            </p>
-                        </div>
+            {/* ── Occupancy Bar ─────────────────────────────────────── */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-8">
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="font-semibold text-gray-900 dark:text-white">Hunian Kamar</h2>
+                    <span className="text-sm text-gray-500">{occupiedRooms} terisi, {availableRooms} tersedia</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div
+                        className="bg-gradient-to-r from-green-500 to-emerald-400 h-3 rounded-full transition-all duration-700"
+                        style={{ width: `${occupancyRate}%` }}
+                    />
+                </div>
+                <div className="flex justify-between text-xs text-gray-400 mt-2">
+                    <span>0%</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">{occupancyRate}% Terisi</span>
+                    <span>100%</span>
+                </div>
+            </div>
+
+            {/* ── Revenue Chart ─────────────────────────────────────── */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-8">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="font-semibold text-gray-900 dark:text-white">Grafik Keuangan</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Pendapatan & Pengeluaran 6 bulan terakhir</p>
                     </div>
+                    <Link
+                        href="/owner/analytics"
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                        Detail laporan →
+                    </Link>
+                </div>
+                <RevenueChart data={chartData} />
+            </div>
+
+            {/* ── Quick Actions ────────────────────────────────────── */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+                <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Menu Cepat</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {[
+                        { href: '/owner/properties/new', label: 'Tambah Properti', icon: '🏠' },
+                        { href: '/owner/bookings', label: 'Booking', icon: '📋', badge: bookingCount },
+                        { href: '/owner/payments', label: 'Pembayaran', icon: '💰' },
+                        { href: '/owner/maintenance', label: 'Keluhan', icon: '🔧' },
+                        { href: '/owner/analytics', label: 'Laporan', icon: '📊' },
+                        { href: '/owner/contracts', label: 'Kontrak', icon: '📄' },
+                    ].map((item) => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className="relative flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors text-center group"
+                        >
+                            {item.badge && item.badge > 0 ? (
+                                <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                                    {item.badge}
+                                </span>
+                            ) : null}
+                            <span className="text-2xl">{item.icon}</span>
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover:text-blue-700 dark:group-hover:text-blue-400 leading-tight">
+                                {item.label}
+                            </span>
+                        </Link>
+                    ))}
                 </div>
             </div>
         </div>

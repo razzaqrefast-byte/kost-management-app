@@ -24,6 +24,8 @@ export default function OwnerNavbar() {
         { href: '/owner/properties', label: 'Properti Saya' },
         { href: '/owner/bookings', label: 'Booking Masuk', badge: unreadCount },
         { href: '/owner/payments', label: 'Pembayaran' },
+        { href: '/owner/contracts', label: 'Kontrak' },
+        { href: '/owner/billing', label: 'Tagihan' },
         { href: '/owner/occupants', label: 'Penghuni' },
         { href: '/owner/maintenance', label: 'Komplain' },
         { href: '/owner/analytics', label: 'Laporan' },
