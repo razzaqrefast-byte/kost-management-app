@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Printer, Loader2 } from 'lucide-react'
-import jsPDF from 'jspdf'
 
 interface DownloadInvoiceButtonProps {
     payment: any
@@ -23,96 +22,116 @@ export default function DownloadInvoiceButton({ payment, tenantName = 'Penghuni'
     const handleDownload = async () => {
         setIsDownloading(true)
         try {
-            // Dynamically import jspdf-autotable to avoid SSR issues
-            await import('jspdf-autotable')
+            // Dynamically import jsPDF only on click (client-side)
+            const { default: jsPDF } = await import('jspdf')
             const doc = new jsPDF()
 
-            // Define variables
+            // ── Variables ──────────────────────────────────────────────
             const propertyName = payment.bookings?.rooms?.properties?.name || 'Kost Management'
             const roomName = payment.bookings?.rooms?.name || 'Kamar'
-            const amountStr = formatIDR(payment.amount)
+            const amount = Number(payment.amount)
+            const amountStr = formatIDR(amount)
             const dateStr = new Date(payment.updated_at || payment.created_at).toLocaleDateString('id-ID', {
                 day: 'numeric', month: 'long', year: 'numeric'
             })
-            const periodStr = `${new Date(payment.period_year, payment.period_month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`
+            const periodStr = new Date(payment.period_year, payment.period_month - 1)
+                .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
             const receiptNumber = `INV-${payment.id.split('-')[0].toUpperCase()}`
 
-            // Colors
-            const primaryColor = [37, 99, 235] // blue-600
-            const textColor = [55, 65, 81] // gray-700
-            const lightGray = [243, 244, 246] // gray-100
-
-            // Base Layout
-            doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2])
-            doc.rect(0, 0, 210, 30, 'F')
+            // ── Header bar ─────────────────────────────────────────────
+            doc.setFillColor(37, 99, 235)
+            doc.rect(0, 0, 210, 35, 'F')
 
             doc.setTextColor(255, 255, 255)
-            doc.setFontSize(22)
-            doc.setFont("helvetica", "bold")
-            doc.text("KWITANSI PEMBAYARAN", 105, 20, { align: "center" })
+            doc.setFontSize(20)
+            doc.setFont('helvetica', 'bold')
+            doc.text('KWITANSI PEMBAYARAN', 105, 15, { align: 'center' })
 
-            // Company & Receipt Info
-            doc.setTextColor(textColor[0], textColor[1], textColor[2])
             doc.setFontSize(10)
-            doc.setFont("helvetica", "normal")
-            doc.text(`Properti: ${propertyName}`, 20, 45)
-            doc.text(`Kamar: ${roomName}`, 20, 52)
+            doc.setFont('helvetica', 'normal')
+            doc.text('KostKu – Smart Kost Management', 105, 24, { align: 'center' })
 
-            doc.setFont("helvetica", "bold")
-            doc.text(`No. Kwitansi: ${receiptNumber}`, 140, 45)
-            doc.setFont("helvetica", "normal")
-            doc.text(`Tanggal: ${dateStr}`, 140, 52)
-            doc.text(`Status: LUNAS`, 140, 59)
+            // ── Company & Receipt info ─────────────────────────────────
+            doc.setTextColor(55, 65, 81)
+            doc.setFontSize(10)
+            doc.setFont('helvetica', 'normal')
+            doc.text(`Properti : ${propertyName}`, 20, 50)
+            doc.text(`Kamar    : ${roomName}`, 20, 57)
 
-            // Line Separator
+            doc.setFont('helvetica', 'bold')
+            doc.text(`No. Kwitansi : ${receiptNumber}`, 130, 50)
+            doc.setFont('helvetica', 'normal')
+            doc.text(`Tanggal      : ${dateStr}`, 130, 57)
+
+            // Status badge (green)
+            doc.setFillColor(220, 252, 231)
+            doc.roundedRect(130, 61, 34, 8, 2, 2, 'F')
+            doc.setTextColor(22, 101, 52)
+            doc.setFontSize(9)
+            doc.setFont('helvetica', 'bold')
+            doc.text('✓ LUNAS', 147, 67, { align: 'center' })
+
+            // ── Divider ────────────────────────────────────────────────
             doc.setDrawColor(200, 200, 200)
-            doc.line(20, 65, 190, 65)
+            doc.line(20, 75, 190, 75)
 
-            // Billing Details
-            doc.setFontSize(11)
-            doc.setFont("helvetica", "bold")
-            doc.text("Diterima Dari:", 20, 75)
-            doc.setFont("helvetica", "normal")
-            doc.text(tenantName, 20, 82)
-
-            // Table for Items
-            const tableData = [
-                ['Pembayaran Sewa Kost', `Periode ${periodStr}`, amountStr]
-            ]
-
-            const autoTable = (doc as any).autoTable
-            autoTable({
-                startY: 95,
-                head: [['Deskripsi', 'Keterangan', 'Total']],
-                body: tableData,
-                theme: 'grid',
-                headStyles: { fillColor: primaryColor, textColor: 255 },
-                styles: { fontSize: 10, cellPadding: 6 },
-                columnStyles: {
-                    0: { cellWidth: 70 },
-                    1: { cellWidth: 60 },
-                    2: { cellWidth: 40, halign: 'right' },
-                }
-            })
-
-            const finalY = (doc as any).lastAutoTable.finalY || 135
-
-            // Total Amount Summary
-            doc.setFillColor(lightGray[0], lightGray[1], lightGray[2])
-            doc.rect(120, finalY + 5, 70, 15, 'F')
-            doc.setFont("helvetica", "bold")
-            doc.setFontSize(12)
-            doc.text("TOTAL DIBAYAR:", 125, finalY + 15)
-            doc.text(amountStr, 185, finalY + 15, { align: 'right' })
-
-            // Footer / Signature area
-            doc.setFont("helvetica", "normal")
+            // ── Diterima dari ─────────────────────────────────────────
+            doc.setTextColor(55, 65, 81)
             doc.setFontSize(10)
-            doc.text("Terima kasih atas pembayaran Anda.", 105, finalY + 40, { align: 'center' })
-            doc.setFontSize(8)
-            doc.setTextColor(150, 150, 150)
-            doc.text("Kwitansi ini dihasilkan secara otomatis oleh sistem KostKu dan sah sebagai bukti pembayaran.", 105, finalY + 48, { align: 'center' })
+            doc.setFont('helvetica', 'bold')
+            doc.text('Diterima Dari:', 20, 85)
+            doc.setFont('helvetica', 'normal')
+            doc.text(tenantName, 20, 92)
 
+            // ── Table header ───────────────────────────────────────────
+            const tableTop = 102
+            doc.setFillColor(37, 99, 235)
+            doc.rect(20, tableTop, 170, 9, 'F')
+            doc.setTextColor(255, 255, 255)
+            doc.setFontSize(9)
+            doc.setFont('helvetica', 'bold')
+            doc.text('Deskripsi', 25, tableTop + 6)
+            doc.text('Keterangan', 100, tableTop + 6)
+            doc.text('Jumlah', 185, tableTop + 6, { align: 'right' })
+
+            // ── Table row ──────────────────────────────────────────────
+            const rowTop = tableTop + 9
+            doc.setFillColor(249, 250, 251)
+            doc.rect(20, rowTop, 170, 10, 'F')
+            doc.setDrawColor(229, 231, 235)
+            doc.rect(20, rowTop, 170, 10, 'S')
+
+            doc.setTextColor(55, 65, 81)
+            doc.setFont('helvetica', 'normal')
+            doc.text('Pembayaran Sewa Kost', 25, rowTop + 6.5)
+            doc.text(`Periode ${periodStr}`, 100, rowTop + 6.5)
+            doc.text(amountStr, 185, rowTop + 6.5, { align: 'right' })
+
+            // ── Total box ──────────────────────────────────────────────
+            const totalTop = rowTop + 18
+            doc.setFillColor(239, 246, 255)
+            doc.rect(120, totalTop, 70, 14, 'F')
+            doc.setDrawColor(147, 197, 253)
+            doc.rect(120, totalTop, 70, 14, 'S')
+
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(10)
+            doc.setTextColor(30, 64, 175)
+            doc.text('TOTAL DIBAYAR :', 125, totalTop + 9)
+            doc.text(amountStr, 185, totalTop + 9, { align: 'right' })
+
+            // ── Footer ─────────────────────────────────────────────────
+            doc.setFont('helvetica', 'normal')
+            doc.setFontSize(9)
+            doc.setTextColor(107, 114, 128)
+            doc.text('Terima kasih atas kepercayaan Anda.', 105, totalTop + 30, { align: 'center' })
+            doc.setFontSize(7.5)
+            doc.text(
+                'Kwitansi ini diterbitkan secara digital oleh sistem KostKu dan sah sebagai bukti pembayaran resmi.',
+                105, totalTop + 37, { align: 'center' }
+            )
+
+            // ── Save ───────────────────────────────────────────────────
             doc.save(`Kwitansi_${receiptNumber}.pdf`)
         } catch (error) {
             console.error('Error generating PDF:', error)
@@ -126,7 +145,7 @@ export default function DownloadInvoiceButton({ payment, tenantName = 'Penghuni'
         <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
             title="Download Kwitansi PDF"
         >
             {isDownloading ? (
